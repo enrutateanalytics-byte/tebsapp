@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Bus, Route as RouteIcon, MapPin, LogOut, Navigation } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Bus, LogOut, Navigation } from 'lucide-react';
 import GoogleMapsProvider from '@/components/maps/GoogleMapsProvider';
 import PublicCombinedMap from '@/components/public/PublicCombinedMap';
 
@@ -82,88 +82,46 @@ const PublicApp = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Routes List */}
-          <div className="space-y-4">
-            <h2 className="font-semibold text-lg flex items-center gap-2">
-              <RouteIcon className="w-5 h-5 text-primary" />
-              Rutas Disponibles
-            </h2>
-            {routesLoading ? (
-              <p className="text-muted-foreground">Cargando rutas...</p>
-            ) : routes?.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  No hay rutas disponibles
-                </CardContent>
-              </Card>
-            ) : (
-              routes?.map((route) => (
-                <Card 
-                  key={route.id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedRoute?.id === route.id ? 'ring-2 ring-primary' : ''
-                  }`}
-                  onClick={() => setSelectedRoute(route)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <h3 className="font-medium">{route.name}</h3>
-                        {route.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">
-                            {route.description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          {route.distance_km && (
-                            <span>{route.distance_km} km</span>
-                          )}
-                          {route.estimated_duration_minutes && (
-                            <span>• {route.estimated_duration_minutes} min</span>
-                          )}
-                        </div>
-                      </div>
-                      {route.kml_file_path && (
-                        <Badge variant="secondary" className="shrink-0">
-                          <MapPin className="w-3 h-3 mr-1" />
-                          Mapa
-                        </Badge>
-                      )}
-                    </div>
-                    {(route.origin_address || route.destination_address) && (
-                      <div className="mt-3 pt-3 border-t border-border text-xs space-y-1">
-                        {route.origin_address && (
-                          <p><span className="text-muted-foreground">Origen:</span> {route.origin_address}</p>
-                        )}
-                        {route.destination_address && (
-                          <p><span className="text-muted-foreground">Destino:</span> {route.destination_address}</p>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-
-          {/* Map with Real-time Tracking */}
-          <div className="lg:col-span-2">
-            <Card className="h-[600px]">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Navigation className="w-5 h-5 text-primary" />
-                  {selectedRoute ? selectedRoute.name : 'Ubicación en Tiempo Real'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="h-[calc(100%-60px)]">
-                <GoogleMapsProvider>
-                  <PublicCombinedMap route={selectedRoute} clientId={clientId} />
-                </GoogleMapsProvider>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        <Card className="h-[calc(100vh-120px)]">
+          <CardHeader className="pb-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Navigation className="w-5 h-5 text-primary" />
+                Ubicación en Tiempo Real
+              </CardTitle>
+              <Select
+                value={selectedRoute?.id || ''}
+                onValueChange={(value) => {
+                  const route = routes?.find(r => r.id === value) || null;
+                  setSelectedRoute(route);
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-[280px] bg-background">
+                  <SelectValue placeholder="Seleccionar ruta..." />
+                </SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  {routesLoading ? (
+                    <SelectItem value="loading" disabled>Cargando rutas...</SelectItem>
+                  ) : routes?.length === 0 ? (
+                    <SelectItem value="empty" disabled>No hay rutas disponibles</SelectItem>
+                  ) : (
+                    routes?.map((route) => (
+                      <SelectItem key={route.id} value={route.id}>
+                        {route.name}
+                        {route.distance_km && ` (${route.distance_km} km)`}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardHeader>
+          <CardContent className="h-[calc(100%-80px)]">
+            <GoogleMapsProvider>
+              <PublicCombinedMap route={selectedRoute} clientId={clientId} />
+            </GoogleMapsProvider>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
