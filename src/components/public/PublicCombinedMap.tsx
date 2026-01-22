@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { GoogleMap, Marker, Polyline } from '@react-google-maps/api';
 import { supabase } from '@/integrations/supabase/client';
-import { parseKmlFile } from '@/lib/kmlParser';
+import { stringToCoordinates } from '@/lib/kmlParser';
 
 interface RouteData {
   id: string;
@@ -33,35 +33,15 @@ const defaultCenter = { lat: 19.4326, lng: -99.1332 };
 
 const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
   const [routeCoordinates, setRouteCoordinates] = useState<google.maps.LatLngLiteral[]>([]);
-  const [loadingRoute, setLoadingRoute] = useState(false);
 
-  // Load KML route coordinates
+  // Parse route coordinates from stored JSON
   useEffect(() => {
-    const loadKml = async () => {
-      if (!route?.kml_file_path) {
-        setRouteCoordinates([]);
-        return;
-      }
-
-      setLoadingRoute(true);
-      try {
-        const { data, error } = await supabase.storage
-          .from('kml-files')
-          .download(route.kml_file_path);
-
-        if (error) throw error;
-        const text = await data.text();
-        const coords = parseKmlFile(text);
-        setRouteCoordinates(coords);
-      } catch (error) {
-        console.error('Error loading KML:', error);
-        setRouteCoordinates([]);
-      } finally {
-        setLoadingRoute(false);
-      }
-    };
-
-    loadKml();
+    if (route?.kml_file_path) {
+      const coords = stringToCoordinates(route.kml_file_path);
+      setRouteCoordinates(coords);
+    } else {
+      setRouteCoordinates([]);
+    }
   }, [route?.kml_file_path]);
 
   // Get routes for this client to find assigned units
@@ -156,14 +136,6 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
       map.fitBounds(bounds, 50);
     }
   };
-
-  if (loadingRoute) {
-    return (
-      <div className="h-full flex items-center justify-center text-muted-foreground">
-        Cargando mapa...
-      </div>
-    );
-  }
 
   return (
     <GoogleMap
