@@ -14,13 +14,269 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      administrators: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      assignments: {
+        Row: {
+          assignment_date: string
+          created_at: string
+          end_time: string | null
+          id: string
+          notes: string | null
+          route_id: string
+          start_time: string | null
+          status: string
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_date?: string
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          route_id: string
+          start_time?: string | null
+          status?: string
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_date?: string
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          route_id?: string
+          start_time?: string | null
+          status?: string
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignments_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          address: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      gps_positions: {
+        Row: {
+          assignment_id: string | null
+          heading: number | null
+          id: string
+          latitude: number
+          longitude: number
+          recorded_at: string
+          speed: number | null
+          unit_id: string
+        }
+        Insert: {
+          assignment_id?: string | null
+          heading?: number | null
+          id?: string
+          latitude: number
+          longitude: number
+          recorded_at?: string
+          speed?: number | null
+          unit_id: string
+        }
+        Update: {
+          assignment_id?: string | null
+          heading?: number | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          recorded_at?: string
+          speed?: number | null
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gps_positions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gps_positions_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routes: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          description: string | null
+          destination_address: string | null
+          distance_km: number | null
+          estimated_duration_minutes: number | null
+          id: string
+          is_active: boolean
+          kml_file_path: string | null
+          name: string
+          origin_address: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          destination_address?: string | null
+          distance_km?: number | null
+          estimated_duration_minutes?: number | null
+          id?: string
+          is_active?: boolean
+          kml_file_path?: string | null
+          name: string
+          origin_address?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          destination_address?: string | null
+          distance_km?: number | null
+          estimated_duration_minutes?: number | null
+          id?: string
+          is_active?: boolean
+          kml_file_path?: string | null
+          name?: string
+          origin_address?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      units: {
+        Row: {
+          brand: string | null
+          capacity: number
+          created_at: string
+          driver_name: string | null
+          driver_phone: string | null
+          id: string
+          is_active: boolean
+          model: string | null
+          notes: string | null
+          plate_number: string
+          updated_at: string
+          year: number | null
+        }
+        Insert: {
+          brand?: string | null
+          capacity?: number
+          created_at?: string
+          driver_name?: string | null
+          driver_phone?: string | null
+          id?: string
+          is_active?: boolean
+          model?: string | null
+          notes?: string | null
+          plate_number: string
+          updated_at?: string
+          year?: number | null
+        }
+        Update: {
+          brand?: string | null
+          capacity?: number
+          created_at?: string
+          driver_name?: string | null
+          driver_phone?: string | null
+          id?: string
+          is_active?: boolean
+          model?: string | null
+          notes?: string | null
+          plate_number?: string
+          updated_at?: string
+          year?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_administrator: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
