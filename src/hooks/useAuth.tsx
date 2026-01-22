@@ -62,20 +62,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signUp = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({ 
+      email, 
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`
+      }
+    });
     
     if (!error && data.user) {
-      // Auto-add first user as admin
-      const { count } = await supabase
-        .from('administrators')
-        .select('*', { count: 'exact', head: true });
-      
-      if (count === 0) {
-        await supabase.from('administrators').insert({
-          user_id: data.user.id,
-          email: email
-        });
-      }
+      // Usar función SECURITY DEFINER para registrar primer admin
+      await supabase.rpc('register_first_admin', {
+        p_user_id: data.user.id,
+        p_email: email
+      });
     }
     
     return { error };
