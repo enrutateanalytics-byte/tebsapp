@@ -21,7 +21,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Building2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Building2, Copy, KeyRound } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface Client {
   id: string;
@@ -31,6 +32,7 @@ interface Client {
   contact_phone: string | null;
   address: string | null;
   notes: string | null;
+  access_code?: string | null;
 }
 
 const Clients = () => {
@@ -46,9 +48,14 @@ const Clients = () => {
         .select('*')
         .order('name');
       if (error) throw error;
-      return data as Client[];
+      return data as any[];
     },
   });
+
+  const copyAccessCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast.success('Código de acceso copiado');
+  };
 
   const createMutation = useMutation({
     mutationFn: async (client: Omit<Client, 'id'>) => {
@@ -211,6 +218,7 @@ const Clients = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Empresa</TableHead>
+                <TableHead>Código de Acceso</TableHead>
                 <TableHead>Contacto</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Teléfono</TableHead>
@@ -221,6 +229,26 @@ const Clients = () => {
               {clients?.map((client) => (
                 <TableRow key={client.id}>
                   <TableCell className="font-medium">{client.name}</TableCell>
+                  <TableCell>
+                    {client.access_code ? (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="font-mono tracking-wider">
+                          <KeyRound className="w-3 h-3 mr-1" />
+                          {client.access_code}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => copyAccessCode(client.access_code)}
+                        >
+                          <Copy className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
                   <TableCell>{client.contact_name || '-'}</TableCell>
                   <TableCell>{client.contact_email || '-'}</TableCell>
                   <TableCell>{client.contact_phone || '-'}</TableCell>

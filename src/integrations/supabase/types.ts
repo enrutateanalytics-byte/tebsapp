@@ -91,6 +91,7 @@ export type Database = {
       }
       clients: {
         Row: {
+          access_code: string | null
           address: string | null
           contact_email: string | null
           contact_name: string | null
@@ -102,6 +103,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          access_code?: string | null
           address?: string | null
           contact_email?: string | null
           contact_name?: string | null
@@ -113,6 +115,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          access_code?: string | null
           address?: string | null
           contact_email?: string | null
           contact_name?: string | null
@@ -276,6 +279,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_access_code: { Args: never; Returns: string }
       is_administrator: { Args: never; Returns: boolean }
       register_first_admin: {
         Args: { p_email: string; p_user_id: string }
