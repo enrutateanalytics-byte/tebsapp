@@ -13,6 +13,8 @@ import Assignments from "./pages/Assignments";
 import Tracking from "./pages/Tracking";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import NotFound from "./pages/NotFound";
+import PublicAccess from "./pages/PublicAccess";
+import PublicApp from "./pages/PublicApp";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +28,10 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/login" element={<Login />} />
+            {/* Public routes for users */}
+            <Route path="/access" element={<PublicAccess />} />
+            <Route path="/app" element={<PublicApp />} />
+            {/* Admin routes */}
             <Route element={<DashboardLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/clients" element={<Clients />} />
