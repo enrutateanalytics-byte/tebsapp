@@ -8,7 +8,7 @@ interface GoogleMapsProviderProps {
 }
 
 const GoogleMapsProvider = ({ children }: GoogleMapsProviderProps) => {
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const apiKey = 'AIzaSyCOf6lTL_hzeKV8MWzyu9APPh82ysRDeFc';
 
   if (!apiKey) {
     return (
