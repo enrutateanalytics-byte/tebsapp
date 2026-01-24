@@ -5,8 +5,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Tracksolid API base URL
-const TRACKSOLID_API_URL = 'https://api.tracksolidpro.com/v1/api'
+// Tracksolid API base URL - Regional endpoints:
+// HK/SG: https://hk-open.tracksolidpro.com/route/rest
+// EU: https://eu-open.tracksolidpro.com/route/rest  
+// US: https://us-open.tracksolidpro.com/route/rest
+// China: http://open.10000track.com/route/rest
+const TRACKSOLID_API_URL = 'https://hk-open.tracksolidpro.com/route/rest'
 
 interface TracksolidTokenResponse {
   code: number
@@ -195,6 +199,18 @@ async function md5(message: string): Promise<string> {
   return md5Impl(message)
 }
 
+// Format date to Tracksolid format: yyyy-MM-dd HH:mm:ss (UTC)
+function formatTimestamp(): string {
+  const now = new Date()
+  const year = now.getUTCFullYear()
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(now.getUTCDate()).padStart(2, '0')
+  const hours = String(now.getUTCHours()).padStart(2, '0')
+  const minutes = String(now.getUTCMinutes()).padStart(2, '0')
+  const seconds = String(now.getUTCSeconds()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
+
 // Generate signature for Tracksolid API
 async function generateSign(params: Record<string, string>, appSecret: string): Promise<string> {
   const sortedKeys = Object.keys(params).sort()
@@ -214,8 +230,10 @@ async function getAccessToken(
   userId: string, 
   userPassword: string
 ): Promise<string> {
-  const timestamp = Math.floor(Date.now() / 1000).toString()
+  const timestamp = formatTimestamp()
   const passwordMd5 = await md5(userPassword)
+  
+  console.log('Auth params - timestamp:', timestamp, 'user_id:', userId)
   
   const params: Record<string, string> = {
     method: 'jimi.oauth.token.get',
@@ -242,14 +260,21 @@ async function getAccessToken(
     body: new URLSearchParams(params).toString(),
   })
   
-  const result: TracksolidTokenResponse = await response.json()
-  console.log('Token response code:', result.code)
+  const result = await response.json()
+  console.log('Token response:', JSON.stringify(result))
   
-  if (result.code !== 0 || !result.data?.access_token) {
-    throw new Error(`Failed to get access token: ${result.message}`)
+  if (result.code !== 0) {
+    throw new Error(`Failed to get access token: ${result.message || result.msg || 'Unknown error'}`)
   }
   
-  return result.data.access_token
+  // Tracksolid returns result.accessToken (where result is an object inside the response)
+  const accessToken = result.result?.accessToken
+  if (!accessToken) {
+    throw new Error(`No access token in response: ${JSON.stringify(result)}`)
+  }
+  
+  console.log('Access token obtained successfully')
+  return accessToken
 }
 
 // Get device locations from Tracksolid
@@ -264,7 +289,7 @@ async function getDeviceLocations(
     return []
   }
   
-  const timestamp = Math.floor(Date.now() / 1000).toString()
+  const timestamp = formatTimestamp()
   
   const params: Record<string, string> = {
     method: 'jimi.device.location.list',
