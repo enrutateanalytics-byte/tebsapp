@@ -89,6 +89,47 @@ export type Database = {
           },
         ]
       }
+      client_users: {
+        Row: {
+          client_id: string
+          created_at: string
+          email: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          email: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_users_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           access_code: string | null
@@ -280,7 +321,9 @@ export type Database = {
     }
     Functions: {
       generate_access_code: { Args: never; Returns: string }
+      get_user_client_id: { Args: never; Returns: string }
       is_administrator: { Args: never; Returns: boolean }
+      is_client_user: { Args: never; Returns: boolean }
       register_first_admin: {
         Args: { p_email: string; p_user_id: string }
         Returns: boolean
