@@ -20,9 +20,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Building2, Copy, KeyRound } from 'lucide-react';
+import { Plus, Pencil, Trash2, Building2, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import ClientUsersManager from '@/components/clients/ClientUsersManager';
 
 interface Client {
   id: string;
@@ -32,12 +39,12 @@ interface Client {
   contact_phone: string | null;
   address: string | null;
   notes: string | null;
-  access_code?: string | null;
 }
 
 const Clients = () => {
   const [open, setOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [usersSheetClient, setUsersSheetClient] = useState<Client | null>(null);
   const queryClient = useQueryClient();
 
   const { data: clients, isLoading } = useQuery({
@@ -48,14 +55,9 @@ const Clients = () => {
         .select('*')
         .order('name');
       if (error) throw error;
-      return data as any[];
+      return data as Client[];
     },
   });
-
-  const copyAccessCode = (code: string) => {
-    navigator.clipboard.writeText(code);
-    toast.success('Código de acceso copiado');
-  };
 
   const createMutation = useMutation({
     mutationFn: async (client: Omit<Client, 'id'>) => {
@@ -218,11 +220,11 @@ const Clients = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Empresa</TableHead>
-                <TableHead>Código de Acceso</TableHead>
+                <TableHead>Usuarios</TableHead>
                 <TableHead>Contacto</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Teléfono</TableHead>
-                <TableHead className="w-24">Acciones</TableHead>
+                <TableHead className="w-32">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -230,24 +232,14 @@ const Clients = () => {
                 <TableRow key={client.id}>
                   <TableCell className="font-medium">{client.name}</TableCell>
                   <TableCell>
-                    {client.access_code ? (
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="font-mono tracking-wider">
-                          <KeyRound className="w-3 h-3 mr-1" />
-                          {client.access_code}
-                        </Badge>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => copyAccessCode(client.access_code)}
-                        >
-                          <Copy className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setUsersSheetClient(client)}
+                    >
+                      <Users className="w-4 h-4 mr-2" />
+                      Gestionar
+                    </Button>
                   </TableCell>
                   <TableCell>{client.contact_name || '-'}</TableCell>
                   <TableCell>{client.contact_email || '-'}</TableCell>
@@ -283,6 +275,23 @@ const Clients = () => {
           </Table>
         </div>
       )}
+
+      {/* Users Management Sheet */}
+      <Sheet open={!!usersSheetClient} onOpenChange={(open) => !open && setUsersSheetClient(null)}>
+        <SheetContent className="sm:max-w-xl w-full">
+          <SheetHeader>
+            <SheetTitle>Gestión de Usuarios</SheetTitle>
+          </SheetHeader>
+          {usersSheetClient && (
+            <div className="mt-6">
+              <ClientUsersManager 
+                clientId={usersSheetClient.id} 
+                clientName={usersSheetClient.name} 
+              />
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

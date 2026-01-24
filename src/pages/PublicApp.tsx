@@ -4,9 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bus, LogOut, MapPin, Navigation, ChevronDown } from 'lucide-react';
+import { Bus, LogOut, MapPin, Navigation } from 'lucide-react';
 import GoogleMapsProvider from '@/components/maps/GoogleMapsProvider';
 import PublicCombinedMap from '@/components/public/PublicCombinedMap';
+import type { User, Session } from '@supabase/supabase-js';
 
 interface RouteData {
   id: string;
@@ -18,45 +19,120 @@ interface RouteData {
   estimated_duration_minutes: number | null;
   kml_file_path: string | null;
   is_active: boolean;
+  client_id: string | null;
+}
+
+interface ClientUserData {
+  id: string;
+  client_id: string;
+  name: string;
+  is_active: boolean;
+  clients: {
+    name: string;
+  } | null;
 }
 
 const PublicApp = () => {
   const navigate = useNavigate();
   const [selectedRoute, setSelectedRoute] = useState<RouteData | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const clientId = sessionStorage.getItem('publicClientId');
-  const clientName = sessionStorage.getItem('publicClientName');
-
+  // Listen for auth state changes
   useEffect(() => {
-    if (!clientId) {
-      navigate('/access');
-    }
-  }, [clientId, navigate]);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
+    );
 
+    // Check existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!loading && !session) {
+      navigate('/login');
+    }
+  }, [loading, session, navigate]);
+
+  // Fetch client user data
+  const { data: clientUser, isLoading: clientUserLoading } = useQuery({
+    queryKey: ['client-user', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('client_users')
+        .select('id, client_id, name, is_active, clients(name)')
+        .eq('user_id', user!.id)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data as ClientUserData | null;
+    },
+    enabled: !!user,
+  });
+
+  // Redirect if not a valid client user
+  useEffect(() => {
+    if (!clientUserLoading && clientUser === null && user) {
+      // User is authenticated but not a client user
+      supabase.auth.signOut();
+      navigate('/login');
+    } else if (!clientUserLoading && clientUser && !clientUser.is_active) {
+      // User is deactivated
+      supabase.auth.signOut();
+      navigate('/login');
+    }
+  }, [clientUser, clientUserLoading, user, navigate]);
+
+  // Fetch routes for the client
   const { data: routes, isLoading: routesLoading } = useQuery({
-    queryKey: ['public-routes', clientId],
+    queryKey: ['public-routes', clientUser?.client_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('routes')
         .select('*')
-        .eq('client_id', clientId)
+        .eq('client_id', clientUser!.client_id)
         .eq('is_active', true)
         .order('name');
       
       if (error) throw error;
       return data as RouteData[];
     },
-    enabled: !!clientId,
+    enabled: !!clientUser?.client_id,
   });
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('publicClientId');
-    sessionStorage.removeItem('publicClientName');
-    sessionStorage.removeItem('publicAccessCode');
-    navigate('/access');
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/login');
   };
 
-  if (!clientId) return null;
+  if (loading || clientUserLoading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center animate-pulse">
+            <Bus className="w-6 h-6 text-primary" />
+          </div>
+          <p className="text-sm text-muted-foreground">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session || !clientUser) return null;
+
+  const clientName = clientUser.clients?.name || 'Cliente';
 
   return (
     <div className="h-screen w-screen flex flex-col bg-background overflow-hidden">
@@ -84,7 +160,7 @@ const PublicApp = () => {
       {/* Full-screen Map */}
       <div className="flex-1 relative">
         <GoogleMapsProvider>
-          <PublicCombinedMap route={selectedRoute} clientId={clientId} />
+          <PublicCombinedMap route={selectedRoute} clientId={clientUser.client_id} />
         </GoogleMapsProvider>
 
         {/* Floating Route Selector */}
