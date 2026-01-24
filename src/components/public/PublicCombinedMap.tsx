@@ -44,39 +44,22 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
     }
   }, [route?.kml_file_path]);
 
-  // Get routes for this client to find assigned units
-  const { data: routes } = useQuery({
-    queryKey: ['public-routes-for-tracking', clientId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('routes')
-        .select('id')
-        .eq('client_id', clientId)
-        .eq('is_active', true);
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!clientId,
-  });
-
-  const routeIds = routes?.map(r => r.id) || [];
-
+  // Get assignments for the SELECTED route only
   const { data: assignments } = useQuery({
-    queryKey: ['public-assignments', routeIds],
+    queryKey: ['public-assignments', route?.id],
     queryFn: async () => {
-      if (routeIds.length === 0) return [];
+      if (!route?.id) return [];
       
       const { data, error } = await supabase
         .from('assignments')
         .select('unit_id')
-        .in('route_id', routeIds)
+        .eq('route_id', route.id)
         .eq('status', 'in_progress');
       
       if (error) throw error;
       return data;
     },
-    enabled: routeIds.length > 0,
+    enabled: !!route?.id,
   });
 
   const unitIds = [...new Set(assignments?.map(a => a.unit_id) || [])];
