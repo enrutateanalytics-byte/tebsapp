@@ -325,7 +325,7 @@ const Routes = () => {
           </DialogHeader>
           <div className="flex-1 h-full min-h-[400px]">
             <GoogleMapsProvider>
-              <RouteMap coordinates={kmlCoordinates} className="w-full h-full rounded-lg overflow-hidden" />
+              <RouteMap coordinates={kmlCoordinates} routeId={selectedRoute?.id} className="w-full h-full rounded-lg overflow-hidden" />
             </GoogleMapsProvider>
           </div>
         </DialogContent>
