@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Bus } from 'lucide-react';
+import { Plus, Pencil, Trash2, Bus, MapPin, RefreshCw } from 'lucide-react';
 
 interface Unit {
   id: string;
@@ -36,11 +36,13 @@ interface Unit {
   driver_phone: string | null;
   is_active: boolean;
   notes: string | null;
+  imei: string | null;
 }
 
 const Units = () => {
   const [open, setOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: units, isLoading } = useQuery({
@@ -97,6 +99,25 @@ const Units = () => {
     onError: (error) => toast.error('Error: ' + error.message),
   });
 
+  const handleSyncTracksolid = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-tracksolid');
+      if (error) throw error;
+      if (data?.success) {
+        toast.success(`Sincronizado: ${data.synced} posiciones nuevas`);
+        queryClient.invalidateQueries({ queryKey: ['units'] });
+      } else {
+        toast.error(data?.error || 'Error al sincronizar');
+      }
+    } catch (error) {
+      toast.error('Error al conectar con Tracksolid');
+      console.error(error);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -110,6 +131,7 @@ const Units = () => {
       driver_phone: formData.get('driver_phone') as string || null,
       is_active: formData.get('is_active') === 'on',
       notes: formData.get('notes') as string || null,
+      imei: formData.get('imei') as string || null,
     };
 
     if (editingUnit) {
@@ -126,13 +148,22 @@ const Units = () => {
           <h1 className="text-3xl font-bold">Unidades</h1>
           <p className="text-muted-foreground mt-1">Gestiona los vehículos de la flota</p>
         </div>
-        <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setEditingUnit(null); }}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Nueva Unidad
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleSyncTracksolid}
+            disabled={syncing}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Sincronizando...' : 'Sincronizar GPS'}
+          </Button>
+          <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setEditingUnit(null); }}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Nueva Unidad
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>
@@ -206,6 +237,25 @@ const Units = () => {
                   />
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="imei">IMEI GPS (Tracksolid)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="imei"
+                    name="imei"
+                    placeholder="123456789012345"
+                    defaultValue={editingUnit?.imei ?? ''}
+                    className="flex-1"
+                  />
+                  {editingUnit?.imei && (
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      GPS
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">IMEI de 15 dígitos del dispositivo GPS</p>
+              </div>
               <div className="flex items-center gap-2">
                 <Switch
                   id="is_active"
@@ -233,6 +283,7 @@ const Units = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {isLoading ? (
@@ -252,6 +303,7 @@ const Units = () => {
                 <TableHead>Vehículo</TableHead>
                 <TableHead>Capacidad</TableHead>
                 <TableHead>Conductor</TableHead>
+                <TableHead>GPS</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="w-24">Acciones</TableHead>
               </TableRow>
@@ -267,6 +319,16 @@ const Units = () => {
                   </TableCell>
                   <TableCell>{unit.capacity} pasajeros</TableCell>
                   <TableCell>{unit.driver_name || '-'}</TableCell>
+                  <TableCell>
+                    {unit.imei ? (
+                      <Badge variant="outline" className="text-green-600 border-green-600">
+                        <MapPin className="w-3 h-3 mr-1" />
+                        Vinculado
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">-</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={unit.is_active ? 'default' : 'secondary'}>
                       {unit.is_active ? 'Activa' : 'Inactiva'}
