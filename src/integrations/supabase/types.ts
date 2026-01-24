@@ -35,6 +35,51 @@ export type Database = {
         }
         Relationships: []
       }
+      api_rate_limit_state: {
+        Row: {
+          blocked_until: string | null
+          cached_locations: Json | null
+          cached_token: string | null
+          consecutive_failures: number
+          daily_call_count: number
+          daily_reset_at: string
+          id: string
+          is_blocked: boolean
+          last_success_at: string | null
+          locations_expires_at: string | null
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          blocked_until?: string | null
+          cached_locations?: Json | null
+          cached_token?: string | null
+          consecutive_failures?: number
+          daily_call_count?: number
+          daily_reset_at?: string
+          id?: string
+          is_blocked?: boolean
+          last_success_at?: string | null
+          locations_expires_at?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          blocked_until?: string | null
+          cached_locations?: Json | null
+          cached_token?: string | null
+          consecutive_failures?: number
+          daily_call_count?: number
+          daily_reset_at?: string
+          id?: string
+          is_blocked?: boolean
+          last_success_at?: string | null
+          locations_expires_at?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       assignments: {
         Row: {
           assignment_date: string
