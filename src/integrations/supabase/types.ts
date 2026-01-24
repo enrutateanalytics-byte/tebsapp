@@ -278,6 +278,7 @@ export type Database = {
           driver_name: string | null
           driver_phone: string | null
           id: string
+          imei: string | null
           is_active: boolean
           model: string | null
           notes: string | null
@@ -292,6 +293,7 @@ export type Database = {
           driver_name?: string | null
           driver_phone?: string | null
           id?: string
+          imei?: string | null
           is_active?: boolean
           model?: string | null
           notes?: string | null
@@ -306,6 +308,7 @@ export type Database = {
           driver_name?: string | null
           driver_phone?: string | null
           id?: string
+          imei?: string | null
           is_active?: boolean
           model?: string | null
           notes?: string | null
