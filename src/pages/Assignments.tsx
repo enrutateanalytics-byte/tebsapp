@@ -27,7 +27,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
+
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, CalendarClock } from 'lucide-react';
 import { format } from 'date-fns';
@@ -40,7 +40,6 @@ interface Assignment {
   assignment_date: string;
   start_time: string | null;
   end_time: string | null;
-  status: string;
   notes: string | null;
   routes?: { name: string } | null;
   units?: { plate_number: string; driver_name: string | null } | null;
@@ -56,20 +55,6 @@ interface UnitOption {
   plate_number: string;
   driver_name: string | null;
 }
-
-const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  scheduled: 'secondary',
-  in_progress: 'default',
-  completed: 'outline',
-  cancelled: 'destructive',
-};
-
-const statusLabels: Record<string, string> = {
-  scheduled: 'Programada',
-  in_progress: 'En progreso',
-  completed: 'Completada',
-  cancelled: 'Cancelada',
-};
 
 const Assignments = () => {
   const [open, setOpen] = useState(false);
@@ -165,7 +150,6 @@ const Assignments = () => {
       assignment_date: formData.get('assignment_date') as string,
       start_time: formData.get('start_time') as string || null,
       end_time: formData.get('end_time') as string || null,
-      status: formData.get('status') as string,
       notes: formData.get('notes') as string || null,
     };
 
@@ -258,20 +242,6 @@ const Assignments = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="status">Estado</Label>
-                <Select name="status" defaultValue={editingAssignment?.status ?? 'scheduled'}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="scheduled">Programada</SelectItem>
-                    <SelectItem value="in_progress">En progreso</SelectItem>
-                    <SelectItem value="completed">Completada</SelectItem>
-                    <SelectItem value="cancelled">Cancelada</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="notes">Notas</Label>
                 <Textarea
                   id="notes"
@@ -309,7 +279,6 @@ const Assignments = () => {
                 <TableHead>Ruta</TableHead>
                 <TableHead>Unidad / Conductor</TableHead>
                 <TableHead>Horario</TableHead>
-                <TableHead>Estado</TableHead>
                 <TableHead className="w-24">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -332,11 +301,6 @@ const Assignments = () => {
                     {assignment.start_time && assignment.end_time
                       ? `${assignment.start_time.slice(0, 5)} - ${assignment.end_time.slice(0, 5)}`
                       : assignment.start_time?.slice(0, 5) || '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={statusColors[assignment.status]}>
-                      {statusLabels[assignment.status]}
-                    </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
