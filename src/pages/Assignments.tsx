@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -59,6 +60,7 @@ interface UnitOption {
 const Assignments = () => {
   const [open, setOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
+  const [allDay, setAllDay] = useState(true);
   const queryClient = useQueryClient();
 
   const { data: assignments, isLoading } = useQuery({
@@ -148,8 +150,8 @@ const Assignments = () => {
       route_id: formData.get('route_id') as string,
       unit_id: formData.get('unit_id') as string,
       assignment_date: formData.get('assignment_date') as string,
-      start_time: formData.get('start_time') as string || null,
-      end_time: formData.get('end_time') as string || null,
+      start_time: allDay ? null : (formData.get('start_time') as string || null),
+      end_time: allDay ? null : (formData.get('end_time') as string || null),
       notes: formData.get('notes') as string || null,
     };
 
@@ -160,6 +162,20 @@ const Assignments = () => {
     }
   };
 
+  const handleOpenChange = (o: boolean) => {
+    setOpen(o);
+    if (!o) {
+      setEditingAssignment(null);
+      setAllDay(true);
+    }
+  };
+
+  const handleEdit = (assignment: Assignment) => {
+    setEditingAssignment(assignment);
+    setAllDay(!assignment.start_time && !assignment.end_time);
+    setOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -167,7 +183,7 @@ const Assignments = () => {
           <h1 className="text-3xl font-bold">Asignaciones</h1>
           <p className="text-muted-foreground mt-1">Programa rutas a unidades específicas</p>
         </div>
-        <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setEditingAssignment(null); }}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="w-4 h-4 mr-2" />
@@ -221,26 +237,36 @@ const Assignments = () => {
                   required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="start_time">Hora inicio</Label>
-                  <Input
-                    id="start_time"
-                    name="start_time"
-                    type="time"
-                    defaultValue={editingAssignment?.start_time ?? ''}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="end_time">Hora fin</Label>
-                  <Input
-                    id="end_time"
-                    name="end_time"
-                    type="time"
-                    defaultValue={editingAssignment?.end_time ?? ''}
-                  />
-                </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="all_day"
+                  checked={allDay}
+                  onCheckedChange={(checked) => setAllDay(checked === true)}
+                />
+                <Label htmlFor="all_day" className="cursor-pointer">Todo el día</Label>
               </div>
+              {!allDay && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="start_time">Hora inicio</Label>
+                    <Input
+                      id="start_time"
+                      name="start_time"
+                      type="time"
+                      defaultValue={editingAssignment?.start_time ?? ''}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="end_time">Hora fin</Label>
+                    <Input
+                      id="end_time"
+                      name="end_time"
+                      type="time"
+                      defaultValue={editingAssignment?.end_time ?? ''}
+                    />
+                  </div>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="notes">Notas</Label>
                 <Textarea
@@ -307,10 +333,7 @@ const Assignments = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => {
-                          setEditingAssignment(assignment);
-                          setOpen(true);
-                        }}
+                        onClick={() => handleEdit(assignment)}
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
