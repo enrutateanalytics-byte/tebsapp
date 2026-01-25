@@ -79,7 +79,7 @@ const PublicLogin = () => {
         await supabase.auth.signOut();
         toast({
           title: 'Acceso denegado',
-          description: 'Esta cuenta no tiene acceso a la aplicación pública. Si eres administrador, usa el panel de administración.',
+          description: 'Esta cuenta no tiene acceso a la aplicación pública. Si eres administrador, usa /login.',
           variant: 'destructive',
         });
         return;

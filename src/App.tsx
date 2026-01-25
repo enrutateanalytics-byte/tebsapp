@@ -27,9 +27,10 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            {/* Admin login */}
             <Route path="/login" element={<Login />} />
-            {/* Public routes for users */}
-            <Route path="/login" element={<PublicLogin />} />
+            {/* Public routes for client users */}
+            <Route path="/public-login" element={<PublicLogin />} />
             <Route path="/app" element={<PublicApp />} />
             {/* Admin routes */}
             <Route element={<DashboardLayout />}>

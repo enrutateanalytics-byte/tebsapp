@@ -59,10 +59,10 @@ const PublicApp = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Redirect to login if not authenticated
+  // Redirect to public login if not authenticated
   useEffect(() => {
     if (!loading && !session) {
-      navigate('/login');
+      navigate('/public-login');
     }
   }, [loading, session, navigate]);
 
@@ -87,11 +87,11 @@ const PublicApp = () => {
     if (!clientUserLoading && clientUser === null && user) {
       // User is authenticated but not a client user
       supabase.auth.signOut();
-      navigate('/login');
+      navigate('/public-login');
     } else if (!clientUserLoading && clientUser && !clientUser.is_active) {
       // User is deactivated
       supabase.auth.signOut();
-      navigate('/login');
+      navigate('/public-login');
     }
   }, [clientUser, clientUserLoading, user, navigate]);
 
@@ -114,7 +114,7 @@ const PublicApp = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate('/login');
+    navigate('/public-login');
   };
 
   if (loading || clientUserLoading) {
