@@ -123,8 +123,9 @@ const RouteMap = ({ coordinates, routeId, className }: RouteMapProps) => {
             position={{ lat: Number(pos.latitude), lng: Number(pos.longitude) }}
             title={`${pos.units?.plate_number || 'Unidad'} - ${pos.units?.driver_name || 'Sin conductor'}`}
             icon={{
-              url: 'https://maps.google.com/mapfiles/ms/icons/bus.png',
-              scaledSize: new window.google.maps.Size(32, 32),
+              url: '/images/bus-icon.png',
+              scaledSize: new window.google.maps.Size(40, 40),
+              anchor: new window.google.maps.Point(20, 20),
             }}
           />
         ))}

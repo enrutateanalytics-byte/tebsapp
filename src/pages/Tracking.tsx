@@ -101,6 +101,11 @@ const Tracking = () => {
                       key={pos.id}
                       position={{ lat: Number(pos.latitude), lng: Number(pos.longitude) }}
                       title={`${pos.units?.plate_number} - ${pos.units?.driver_name || 'Sin conductor'}`}
+                      icon={{
+                        url: '/images/bus-icon.png',
+                        scaledSize: new google.maps.Size(40, 40),
+                        anchor: new google.maps.Point(20, 20),
+                      }}
                     />
                   ))}
                 </GoogleMap>
