@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { GoogleMap, Marker, Polyline } from '@react-google-maps/api';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,6 +33,7 @@ const defaultCenter = { lat: 19.4326, lng: -99.1332 };
 
 const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
   const [routeCoordinates, setRouteCoordinates] = useState<google.maps.LatLngLiteral[]>([]);
+  const mapRef = useRef<google.maps.Map | null>(null);
 
   // Parse route coordinates from stored JSON
   useEffect(() => {
@@ -62,7 +63,7 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
     enabled: !!route?.id,
   });
 
-  const unitIds = [...new Set(assignments?.map(a => a.unit_id) || [])];
+  const unitIds = useMemo(() => [...new Set(assignments?.map(a => a.unit_id) || [])], [assignments]);
 
   const { data: positions } = useQuery({
     queryKey: ['public-gps-positions', unitIds],
@@ -105,20 +106,28 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
     return defaultCenter;
   }, [routeCoordinates, positions]);
 
-  const bounds = useMemo(() => {
-    if (routeCoordinates.length === 0 && (!positions || positions.length === 0)) return null;
+  // Fit bounds whenever route or positions change
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (routeCoordinates.length === 0 && (!positions || positions.length === 0)) return;
     
-    const b = new google.maps.LatLngBounds();
-    routeCoordinates.forEach(coord => b.extend(coord));
-    positions?.forEach(pos => b.extend({ lat: Number(pos.latitude), lng: Number(pos.longitude) }));
-    return b;
+    const bounds = new google.maps.LatLngBounds();
+    routeCoordinates.forEach(coord => bounds.extend(coord));
+    positions?.forEach(pos => bounds.extend({ lat: Number(pos.latitude), lng: Number(pos.longitude) }));
+    
+    mapRef.current.fitBounds(bounds, 50);
   }, [routeCoordinates, positions]);
 
-  const handleMapLoad = (map: google.maps.Map) => {
-    if (bounds) {
-      map.fitBounds(bounds, 50);
-    }
-  };
+  const handleMapLoad = useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+    
+    if (routeCoordinates.length === 0 && (!positions || positions.length === 0)) return;
+    
+    const bounds = new google.maps.LatLngBounds();
+    routeCoordinates.forEach(coord => bounds.extend(coord));
+    positions?.forEach(pos => bounds.extend({ lat: Number(pos.latitude), lng: Number(pos.longitude) }));
+    map.fitBounds(bounds, 50);
+  }, [routeCoordinates, positions]);
 
   return (
     <GoogleMap
