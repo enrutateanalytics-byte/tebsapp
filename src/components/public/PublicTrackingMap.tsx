@@ -131,14 +131,7 @@ const PublicTrackingMap = ({ clientId }: PublicTrackingMapProps) => {
           position={{ lat: Number(pos.latitude), lng: Number(pos.longitude) }}
           title={pos.units?.plate_number || 'Unidad'}
           icon={{
-            url: 'data:image/svg+xml,' + encodeURIComponent(`
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="hsl(221, 83%, 53%)" stroke="white" stroke-width="2">
-                <rect x="1" y="3" width="15" height="13" rx="2" ry="2"/>
-                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
-                <circle cx="5.5" cy="18.5" r="2.5"/>
-                <circle cx="18.5" cy="18.5" r="2.5"/>
-              </svg>
-            `),
+            url: '/images/bus-icon.png',
             scaledSize: new google.maps.Size(40, 40),
             anchor: new google.maps.Point(20, 20),
           }}
