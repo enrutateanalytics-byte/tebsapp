@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Bus } from 'lucide-react';
+import tebsaLogo from '@/assets/tebsa-logo.png';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -54,10 +54,8 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-            <Bus className="w-8 h-8 text-primary" />
-          </div>
-          <CardTitle className="text-2xl font-bold">TransportePro</CardTitle>
+          <img src={tebsaLogo} alt="TEBSA" className="mx-auto w-24 h-24 object-contain" />
+          <CardTitle className="text-2xl font-bold">Administrador</CardTitle>
           <CardDescription>Sistema de Gestión de Transporte de Personal</CardDescription>
         </CardHeader>
         <CardContent>
