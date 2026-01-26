@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Route as RouteIcon, Map, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, Route as RouteIcon, Map, Upload, Search } from 'lucide-react';
 import GoogleMapsProvider from '@/components/maps/GoogleMapsProvider';
 import RouteMap from '@/components/maps/RouteMap';
 import BulkRouteUpload from '@/components/routes/BulkRouteUpload';
@@ -65,6 +65,7 @@ const Routes = () => {
   const [kmlStops, setKmlStops] = useState<KmlStop[]>([]);
   const [tempCoordinates, setTempCoordinates] = useState<{ lat: number; lng: number }[]>([]);
   const [tempStops, setTempStops] = useState<KmlStop[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
 
   const { data: routes, isLoading } = useQuery({
@@ -202,6 +203,17 @@ const Routes = () => {
     setKmlStops(stringToStops(route.stops));
     setMapOpen(true);
   };
+
+  const filteredRoutes = useMemo(() => {
+    if (!routes || !searchQuery.trim()) return routes;
+    const query = searchQuery.toLowerCase();
+    return routes.filter((route) =>
+      route.name.toLowerCase().includes(query) ||
+      route.clients?.name?.toLowerCase().includes(query) ||
+      route.origin_address?.toLowerCase().includes(query) ||
+      route.destination_address?.toLowerCase().includes(query)
+    );
+  }, [routes, searchQuery]);
 
   return (
     <div className="space-y-6">
@@ -360,9 +372,19 @@ const Routes = () => {
         </DialogContent>
       </Dialog>
 
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar rutas..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       {isLoading ? (
         <div className="text-center py-8 text-muted-foreground">Cargando...</div>
-      ) : routes?.length === 0 ? (
+      ) : filteredRoutes?.length === 0 ? (
         <div className="text-center py-16 border rounded-lg bg-muted/20">
           <RouteIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">No hay rutas</h3>
@@ -382,7 +404,7 @@ const Routes = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {routes?.map((route) => (
+              {filteredRoutes?.map((route) => (
                 <TableRow key={route.id}>
                   <TableCell className="font-medium">{route.name}</TableCell>
                   <TableCell>{route.clients?.name || '-'}</TableCell>

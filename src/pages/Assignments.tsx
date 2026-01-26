@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/dialog';
 
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, CalendarClock } from 'lucide-react';
+import { Plus, Pencil, Trash2, CalendarClock, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -61,6 +61,7 @@ const Assignments = () => {
   const [open, setOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
   const [allDay, setAllDay] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
 
   const { data: assignments, isLoading } = useQuery({
@@ -176,6 +177,16 @@ const Assignments = () => {
     setOpen(true);
   };
 
+  const filteredAssignments = useMemo(() => {
+    if (!assignments || !searchQuery.trim()) return assignments;
+    const query = searchQuery.toLowerCase();
+    return assignments.filter((assignment) =>
+      assignment.routes?.name?.toLowerCase().includes(query) ||
+      assignment.units?.plate_number?.toLowerCase().includes(query) ||
+      assignment.units?.driver_name?.toLowerCase().includes(query)
+    );
+  }, [assignments, searchQuery]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -288,9 +299,19 @@ const Assignments = () => {
         </Dialog>
       </div>
 
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar asignaciones..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       {isLoading ? (
         <div className="text-center py-8 text-muted-foreground">Cargando...</div>
-      ) : assignments?.length === 0 ? (
+      ) : filteredAssignments?.length === 0 ? (
         <div className="text-center py-16 border rounded-lg bg-muted/20">
           <CalendarClock className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">No hay asignaciones</h3>
@@ -309,7 +330,7 @@ const Assignments = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {assignments?.map((assignment) => (
+              {filteredAssignments?.map((assignment) => (
                 <TableRow key={assignment.id}>
                   <TableCell className="font-medium">
                     {format(new Date(assignment.assignment_date), 'dd MMM yyyy', { locale: es })}

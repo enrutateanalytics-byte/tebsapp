@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -27,7 +27,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Building2, Users } from 'lucide-react';
+import { Plus, Pencil, Trash2, Building2, Users, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import ClientUsersManager from '@/components/clients/ClientUsersManager';
 
@@ -45,6 +45,7 @@ const Clients = () => {
   const [open, setOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [usersSheetClient, setUsersSheetClient] = useState<Client | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
 
   const { data: clients, isLoading } = useQuery({
@@ -119,6 +120,17 @@ const Clients = () => {
       createMutation.mutate(client);
     }
   };
+
+  const filteredClients = useMemo(() => {
+    if (!clients || !searchQuery.trim()) return clients;
+    const query = searchQuery.toLowerCase();
+    return clients.filter((client) =>
+      client.name.toLowerCase().includes(query) ||
+      client.contact_name?.toLowerCase().includes(query) ||
+      client.contact_email?.toLowerCase().includes(query) ||
+      client.contact_phone?.toLowerCase().includes(query)
+    );
+  }, [clients, searchQuery]);
 
   return (
     <div className="space-y-6">
@@ -206,9 +218,19 @@ const Clients = () => {
         </Dialog>
       </div>
 
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar clientes..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       {isLoading ? (
         <div className="text-center py-8 text-muted-foreground">Cargando...</div>
-      ) : clients?.length === 0 ? (
+      ) : filteredClients?.length === 0 ? (
         <div className="text-center py-16 border rounded-lg bg-muted/20">
           <Building2 className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">No hay clientes</h3>
@@ -228,7 +250,7 @@ const Clients = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {clients?.map((client) => (
+              {filteredClients?.map((client) => (
                 <TableRow key={client.id}>
                   <TableCell className="font-medium">{client.name}</TableCell>
                   <TableCell>
