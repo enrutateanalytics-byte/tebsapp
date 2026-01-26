@@ -2,12 +2,13 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { GoogleMap, Marker, Polyline } from '@react-google-maps/api';
 import { supabase } from '@/integrations/supabase/client';
-import { stringToCoordinates } from '@/lib/kmlParser';
+import { stringToCoordinates, stringToStops, KmlStop } from '@/lib/kmlParser';
 
 interface RouteData {
   id: string;
   name: string;
   kml_file_path: string | null;
+  stops?: unknown;
 }
 
 interface GpsPosition {
@@ -33,9 +34,10 @@ const defaultCenter = { lat: 19.4326, lng: -99.1332 };
 
 const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
   const [routeCoordinates, setRouteCoordinates] = useState<google.maps.LatLngLiteral[]>([]);
+  const [stops, setStops] = useState<KmlStop[]>([]);
   const mapRef = useRef<google.maps.Map | null>(null);
 
-  // Parse route coordinates from stored JSON
+  // Parse route coordinates and stops from stored JSON
   useEffect(() => {
     if (route?.kml_file_path) {
       const coords = stringToCoordinates(route.kml_file_path);
@@ -43,7 +45,11 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
     } else {
       setRouteCoordinates([]);
     }
-  }, [route?.kml_file_path]);
+    
+    // Parse stops
+    const routeStops = stringToStops(route?.stops);
+    setStops(routeStops);
+  }, [route?.kml_file_path, route?.stops]);
 
   // Get assignments for the SELECTED route only
   const { data: assignments } = useQuery({
@@ -106,28 +112,30 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
     return defaultCenter;
   }, [routeCoordinates, positions]);
 
-  // Fit bounds whenever route or positions change
+  // Fit bounds whenever route, stops, or positions change
   useEffect(() => {
     if (!mapRef.current) return;
-    if (routeCoordinates.length === 0 && (!positions || positions.length === 0)) return;
+    if (routeCoordinates.length === 0 && stops.length === 0 && (!positions || positions.length === 0)) return;
     
     const bounds = new google.maps.LatLngBounds();
     routeCoordinates.forEach(coord => bounds.extend(coord));
+    stops.forEach(stop => bounds.extend({ lat: stop.lat, lng: stop.lng }));
     positions?.forEach(pos => bounds.extend({ lat: Number(pos.latitude), lng: Number(pos.longitude) }));
     
     mapRef.current.fitBounds(bounds, 50);
-  }, [routeCoordinates, positions]);
+  }, [routeCoordinates, stops, positions]);
 
   const handleMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
     
-    if (routeCoordinates.length === 0 && (!positions || positions.length === 0)) return;
+    if (routeCoordinates.length === 0 && stops.length === 0 && (!positions || positions.length === 0)) return;
     
     const bounds = new google.maps.LatLngBounds();
     routeCoordinates.forEach(coord => bounds.extend(coord));
+    stops.forEach(stop => bounds.extend({ lat: stop.lat, lng: stop.lng }));
     positions?.forEach(pos => bounds.extend({ lat: Number(pos.latitude), lng: Number(pos.longitude) }));
     map.fitBounds(bounds, 50);
-  }, [routeCoordinates, positions]);
+  }, [routeCoordinates, stops, positions]);
 
   return (
     <GoogleMap
@@ -175,6 +183,25 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
           />
         </>
       )}
+
+      {/* Stop markers */}
+      {stops.map((stop, index) => (
+        <Marker
+          key={`stop-${index}`}
+          position={{ lat: stop.lat, lng: stop.lng }}
+          title={stop.name || `Parada ${index + 1}`}
+          icon={{
+            url: 'data:image/svg+xml,' + encodeURIComponent(`
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+                <circle cx="14" cy="14" r="12" fill="hsl(262, 83%, 58%)" stroke="white" stroke-width="2"/>
+                <text x="14" y="18" text-anchor="middle" fill="white" font-size="11" font-weight="bold" font-family="Arial">${index + 1}</text>
+              </svg>
+            `),
+            scaledSize: new google.maps.Size(28, 28),
+            anchor: new google.maps.Point(14, 14),
+          }}
+        />
+      ))}
 
       {/* Unit markers */}
       {positions?.map((pos) => (
