@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Bus } from 'lucide-react';
 import GoogleMapsProvider from '@/components/maps/GoogleMapsProvider';
-import { GoogleMap, Marker } from '@react-google-maps/api';
-import { useMemo } from 'react';
+import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+import { useMemo, useCallback } from 'react';
 
 interface GpsPosition {
   id: string;
@@ -101,11 +101,15 @@ const Tracking = () => {
                       key={pos.id}
                       position={{ lat: Number(pos.latitude), lng: Number(pos.longitude) }}
                       title={`${pos.units?.plate_number} - ${pos.units?.driver_name || 'Sin conductor'}`}
-                      icon={{
-                        url: '/images/bus-icon.png',
-                        scaledSize: new google.maps.Size(40, 40),
-                        anchor: new google.maps.Point(20, 20),
-                      }}
+                      icon={
+                        typeof google !== 'undefined'
+                          ? {
+                              url: '/images/bus-icon.png',
+                              scaledSize: new google.maps.Size(40, 40),
+                              anchor: new google.maps.Point(20, 20),
+                            }
+                          : undefined
+                      }
                     />
                   ))}
                 </GoogleMap>
