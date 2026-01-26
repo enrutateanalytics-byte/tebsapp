@@ -6,7 +6,7 @@ const corsHeaders = {
 }
 
 interface CreateClientUserRequest {
-  email: string
+  username: string
   password: string
   name: string
   client_id: string
@@ -59,12 +59,21 @@ Deno.serve(async (req) => {
 
     // Parse request body
     const body: CreateClientUserRequest = await req.json()
-    const { email, password, name, client_id } = body
+    const { username, password, name, client_id } = body
 
     // Validate required fields
-    if (!email || !password || !name || !client_id) {
+    if (!username || !password || !name || !client_id) {
       return new Response(
-        JSON.stringify({ error: 'Faltan campos requeridos: email, password, name, client_id' }),
+        JSON.stringify({ error: 'Faltan campos requeridos: username, password, name, client_id' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Validate username format (alphanumeric, dots, underscores, min 3 chars)
+    const usernameRegex = /^[a-zA-Z0-9._]{3,30}$/
+    if (!usernameRegex.test(username)) {
+      return new Response(
+        JSON.stringify({ error: 'El username debe tener 3-30 caracteres (letras, números, puntos o guiones bajos)' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -107,9 +116,34 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Check if username already exists
+    const { data: existingUser, error: existingError } = await adminClient
+      .from('client_users')
+      .select('id')
+      .eq('username', username.toLowerCase())
+      .maybeSingle()
+
+    if (existingError) {
+      console.error('Error checking existing username:', existingError)
+      return new Response(
+        JSON.stringify({ error: 'Error verificando username' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (existingUser) {
+      return new Response(
+        JSON.stringify({ error: 'Este nombre de usuario ya está en uso' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Generate internal email for Supabase Auth (users won't see this)
+    const internalEmail = `${username.toLowerCase()}@internal.transportepro.app`
+
     // Create the user in auth.users
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
-      email,
+      email: internalEmail,
       password,
       email_confirm: true, // Auto-confirm email
     })
@@ -119,7 +153,7 @@ Deno.serve(async (req) => {
       
       if (authError.message.includes('already been registered')) {
         return new Response(
-          JSON.stringify({ error: 'Este email ya está registrado' }),
+          JSON.stringify({ error: 'Este nombre de usuario ya está registrado' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
@@ -139,7 +173,8 @@ Deno.serve(async (req) => {
         user_id: userId,
         client_id,
         name,
-        email,
+        username: username.toLowerCase(),
+        email: internalEmail,
         is_active: true
       })
       .select()
@@ -157,7 +192,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log('Successfully created client user:', { email, name, client_id, userId })
+    console.log('Successfully created client user:', { username, name, client_id, userId })
 
     return new Response(
       JSON.stringify({
@@ -165,7 +200,7 @@ Deno.serve(async (req) => {
         message: 'Usuario creado exitosamente',
         user: {
           id: clientUser.id,
-          email: clientUser.email,
+          username: clientUser.username,
           name: clientUser.name,
           client_id: clientUser.client_id,
           is_active: clientUser.is_active
