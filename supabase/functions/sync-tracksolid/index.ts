@@ -231,6 +231,17 @@ async function getAccessToken(
     if (expiresAt > new Date()) {
       console.log('Using cached token, expires at:', state.token_expires_at)
       return state.cached_token
+    } else {
+      // Token expired, clear it before requesting new one
+      console.log('Token expired, clearing cache...')
+      await supabase
+        .from('api_rate_limit_state')
+        .update({
+          cached_token: null,
+          token_expires_at: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', 'tracksolid')
     }
   }
   
@@ -300,7 +311,7 @@ async function getAccessToken(
   return accessToken
 }
 
-// Get device locations from Tracksolid
+// Get device locations from Tracksolid - processes in batches to avoid API limits
 async function getDeviceLocations(
   appKey: string,
   appSecret: string,
@@ -312,59 +323,80 @@ async function getDeviceLocations(
     return []
   }
   
-  const timestamp = formatTimestamp()
+  const allLocations: DeviceLocation[] = []
+  const BATCH_SIZE = 100 // Tracksolid API limit per request
   
-  const params: Record<string, string> = {
-    method: 'jimi.device.location.get',
-    app_key: appKey,
-    timestamp: timestamp,
-    v: '1.0',
-    format: 'json',
-    sign_method: 'md5',
-    access_token: accessToken,
-    imeis: imeis.join(','),
-    map_type: 'GOOGLE'
+  // Process IMEIs in batches
+  for (let i = 0; i < imeis.length; i += BATCH_SIZE) {
+    const batchImeis = imeis.slice(i, i + BATCH_SIZE)
+    console.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batchImeis.length} IMEIs`)
+    
+    const timestamp = formatTimestamp()
+    
+    const params: Record<string, string> = {
+      method: 'jimi.device.location.get',
+      app_key: appKey,
+      timestamp: timestamp,
+      v: '1.0',
+      format: 'json',
+      sign_method: 'md5',
+      access_token: accessToken,
+      imeis: batchImeis.join(','),
+      map_type: 'GOOGLE'
+    }
+    
+    params.sign = generateSign(params, appSecret)
+    
+    console.log(`Requesting locations for ${batchImeis.length} devices`)
+    
+    try {
+      const response = await fetch(TRACKSOLID_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(params).toString(),
+      })
+      
+      const result = await response.json()
+      console.log('Location response code:', result.code, 'message:', result.message || result.msg)
+      
+      if (result.code !== 0) {
+        console.error(`Batch failed: ${result.message || result.msg}`)
+        // Continue with next batch instead of failing completely
+        continue
+      }
+      
+      // Parse the result - Tracksolid returns array in result field
+      const resultData = result.result || []
+      
+      for (const item of resultData) {
+        allLocations.push({
+          imei: item.imei,
+          lat: parseFloat(item.lat) || 0,
+          lng: parseFloat(item.lng) || 0,
+          speed: parseFloat(item.speed) || 0,
+          direction: parseFloat(item.direction) || 0,
+          gpsTime: item.gpsTime || item.positionTime,
+          positionTime: item.positionTime,
+          status: item.status || 0
+        })
+      }
+      
+      console.log(`Batch returned ${resultData.length} locations, total so far: ${allLocations.length}`)
+      
+      // Small delay between batches to avoid rate limiting
+      if (i + BATCH_SIZE < imeis.length) {
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+    } catch (batchError) {
+      console.error(`Error processing batch: ${batchError}`)
+      // Continue with next batch
+    }
   }
   
-  params.sign = generateSign(params, appSecret)
-  
-  console.log(`Requesting locations for ${imeis.length} devices:`, imeis.join(','))
-  console.log('Location request params:', JSON.stringify(params))
-  
-  const response = await fetch(TRACKSOLID_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams(params).toString(),
-  })
-  
-  const result = await response.json()
-  console.log('Location response:', JSON.stringify(result))
-  
-  if (result.code !== 0) {
-    throw new Error(`Failed to get locations: ${result.message || result.msg}`)
-  }
-  
-  // Parse the result - Tracksolid returns array in result field
-  const locations: DeviceLocation[] = []
-  const resultData = result.result || []
-  
-  for (const item of resultData) {
-    locations.push({
-      imei: item.imei,
-      lat: parseFloat(item.lat) || 0,
-      lng: parseFloat(item.lng) || 0,
-      speed: parseFloat(item.speed) || 0,
-      direction: parseFloat(item.direction) || 0,
-      gpsTime: item.gpsTime || item.positionTime,
-      positionTime: item.positionTime,
-      status: item.status || 0
-    })
-  }
-  
-  console.log(`Parsed ${locations.length} locations`)
-  return locations
+  console.log(`Total locations retrieved: ${allLocations.length}`)
+  return allLocations
 }
 
 Deno.serve(async (req) => {
