@@ -374,6 +374,51 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    
+    // === AUTHENTICATION CHECK ===
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      console.log('Missing or invalid Authorization header')
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Create client with user's token to verify identity
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    })
+    
+    // Verify JWT and get claims
+    const token = authHeader.replace('Bearer ', '')
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token)
+    
+    if (claimsError || !claimsData?.claims) {
+      console.log('Invalid token:', claimsError?.message)
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Check if user is administrator
+    const { data: isAdmin, error: adminError } = await supabaseAuth.rpc('is_administrator')
+    
+    if (adminError || !isAdmin) {
+      console.log('User is not administrator:', claimsData.claims.sub)
+      return new Response(
+        JSON.stringify({ error: 'Forbidden - Administrator access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    console.log('Authenticated as administrator:', claimsData.claims.sub)
+    // === END AUTHENTICATION CHECK ===
+    
     // Get URL params for mode
     const url = new URL(req.url)
     const mode = url.searchParams.get('mode')
@@ -383,14 +428,12 @@ Deno.serve(async (req) => {
     const appSecret = Deno.env.get('TRACKSOLID_APP_SECRET')
     const account = Deno.env.get('TRACKSOLID_USER_ID')
     const passwordMd5 = Deno.env.get('TRACKSOLID_PASSWORD_MD5')
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     
     if (!appKey || !appSecret || !account || !passwordMd5) {
       throw new Error('Missing Tracksolid credentials in environment variables')
     }
     
-    // Create Supabase client with service role
+    // Create Supabase client with service role for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     
     // Handle reset mode
