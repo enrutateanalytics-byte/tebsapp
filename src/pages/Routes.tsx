@@ -33,6 +33,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Route as RouteIcon, Map, Upload } from 'lucide-react';
 import GoogleMapsProvider from '@/components/maps/GoogleMapsProvider';
 import RouteMap from '@/components/maps/RouteMap';
+import BulkRouteUpload from '@/components/routes/BulkRouteUpload';
 import { parseKmlFile, stringToCoordinates, coordinatesToString, stringToStops, stopsToString, KmlStop } from '@/lib/kmlParser';
 
 interface RouteData {
@@ -209,21 +210,23 @@ const Routes = () => {
           <h1 className="text-3xl font-bold">Rutas</h1>
           <p className="text-muted-foreground mt-1">Gestiona las rutas de transporte</p>
         </div>
-        <Dialog open={open} onOpenChange={(o) => { 
-          setOpen(o); 
-          if (!o) {
-            setEditingRoute(null);
-            setTempCoordinates([]);
-            setTempStops([]);
-          }
-        }}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Nueva Ruta
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="flex gap-2">
+          <BulkRouteUpload />
+          <Dialog open={open} onOpenChange={(o) => { 
+            setOpen(o); 
+            if (!o) {
+              setEditingRoute(null);
+              setTempCoordinates([]);
+              setTempStops([]);
+            }
+          }}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Nueva Ruta
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingRoute ? 'Editar Ruta' : 'Nueva Ruta'}
@@ -340,7 +343,8 @@ const Routes = () => {
               </div>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       <Dialog open={mapOpen} onOpenChange={setMapOpen}>
