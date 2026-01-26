@@ -33,7 +33,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Route as RouteIcon, Map, Upload } from 'lucide-react';
 import GoogleMapsProvider from '@/components/maps/GoogleMapsProvider';
 import RouteMap from '@/components/maps/RouteMap';
-import { parseKmlFile, stringToCoordinates, coordinatesToString } from '@/lib/kmlParser';
+import { parseKmlFile, stringToCoordinates, coordinatesToString, stringToStops, stopsToString, KmlStop } from '@/lib/kmlParser';
 
 interface RouteData {
   id: string;
@@ -41,6 +41,7 @@ interface RouteData {
   name: string;
   description: string | null;
   kml_file_path: string | null;
+  stops: unknown;
   origin_address: string | null;
   destination_address: string | null;
   estimated_duration_minutes: number | null;
@@ -60,7 +61,9 @@ const Routes = () => {
   const [editingRoute, setEditingRoute] = useState<RouteData | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<RouteData | null>(null);
   const [kmlCoordinates, setKmlCoordinates] = useState<{ lat: number; lng: number }[]>([]);
+  const [kmlStops, setKmlStops] = useState<KmlStop[]>([]);
   const [tempCoordinates, setTempCoordinates] = useState<{ lat: number; lng: number }[]>([]);
+  const [tempStops, setTempStops] = useState<KmlStop[]>([]);
   const queryClient = useQueryClient();
 
   const { data: routes, isLoading } = useQuery({
@@ -89,7 +92,10 @@ const Routes = () => {
 
   const createMutation = useMutation({
     mutationFn: async (route: Omit<RouteData, 'id' | 'clients'>) => {
-      const { error } = await supabase.from('routes').insert(route);
+      const { error } = await supabase.from('routes').insert({
+        ...route,
+        stops: route.stops as unknown as null,
+      });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -97,6 +103,7 @@ const Routes = () => {
       toast.success('Ruta creada correctamente');
       setOpen(false);
       setTempCoordinates([]);
+      setTempStops([]);
     },
     onError: (error) => toast.error('Error: ' + error.message),
   });
@@ -105,7 +112,10 @@ const Routes = () => {
     mutationFn: async (route: Omit<RouteData, 'clients'>) => {
       const { error } = await supabase
         .from('routes')
-        .update(route)
+        .update({
+          ...route,
+          stops: route.stops as unknown as null,
+        })
         .eq('id', route.id);
       if (error) throw error;
     },
@@ -115,6 +125,7 @@ const Routes = () => {
       setOpen(false);
       setEditingRoute(null);
       setTempCoordinates([]);
+      setTempStops([]);
     },
     onError: (error) => toast.error('Error: ' + error.message),
   });
@@ -138,10 +149,14 @@ const Routes = () => {
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result as string;
-      const coordinates = parseKmlFile(content);
-      if (coordinates.length > 0) {
-        setTempCoordinates(coordinates);
-        toast.success(`${coordinates.length} puntos cargados del archivo KML`);
+      const result = parseKmlFile(content);
+      if (result.coordinates.length > 0 || result.stops.length > 0) {
+        setTempCoordinates(result.coordinates);
+        setTempStops(result.stops);
+        const messages = [];
+        if (result.coordinates.length > 0) messages.push(`${result.coordinates.length} puntos de ruta`);
+        if (result.stops.length > 0) messages.push(`${result.stops.length} paradas`);
+        toast.success(`Cargados: ${messages.join(', ')}`);
       } else {
         toast.error('No se encontraron coordenadas en el archivo KML');
       }
@@ -168,6 +183,9 @@ const Routes = () => {
       kml_file_path: tempCoordinates.length > 0 
         ? coordinatesToString(tempCoordinates) 
         : editingRoute?.kml_file_path || null,
+      stops: (tempStops.length > 0 
+        ? tempStops 
+        : stringToStops(editingRoute?.stops) || []) as unknown as null,
     };
 
     if (editingRoute) {
@@ -180,6 +198,7 @@ const Routes = () => {
   const viewRouteMap = (route: RouteData) => {
     setSelectedRoute(route);
     setKmlCoordinates(stringToCoordinates(route.kml_file_path));
+    setKmlStops(stringToStops(route.stops));
     setMapOpen(true);
   };
 
@@ -195,6 +214,7 @@ const Routes = () => {
           if (!o) {
             setEditingRoute(null);
             setTempCoordinates([]);
+            setTempStops([]);
           }
         }}>
           <DialogTrigger asChild>
@@ -291,9 +311,14 @@ const Routes = () => {
                     className="flex-1"
                   />
                 </div>
-                {(tempCoordinates.length > 0 || stringToCoordinates(editingRoute?.kml_file_path).length > 0) && (
+              {(tempCoordinates.length > 0 || stringToCoordinates(editingRoute?.kml_file_path).length > 0) && (
                   <p className="text-sm text-primary">
                     ✓ {tempCoordinates.length || stringToCoordinates(editingRoute?.kml_file_path).length} puntos de ruta cargados
+                  </p>
+                )}
+                {(tempStops.length > 0 || stringToStops(editingRoute?.stops).length > 0) && (
+                  <p className="text-sm text-primary">
+                    ✓ {tempStops.length || stringToStops(editingRoute?.stops).length} paradas cargadas
                   </p>
                 )}
               </div>
@@ -325,7 +350,7 @@ const Routes = () => {
           </DialogHeader>
           <div className="flex-1 h-full min-h-[400px]">
             <GoogleMapsProvider>
-              <RouteMap coordinates={kmlCoordinates} routeId={selectedRoute?.id} className="w-full h-full rounded-lg overflow-hidden" />
+              <RouteMap coordinates={kmlCoordinates} stops={kmlStops} routeId={selectedRoute?.id} className="w-full h-full rounded-lg overflow-hidden" />
             </GoogleMapsProvider>
           </div>
         </DialogContent>
@@ -391,6 +416,7 @@ const Routes = () => {
                         onClick={() => {
                           setEditingRoute(route);
                           setTempCoordinates(stringToCoordinates(route.kml_file_path));
+                          setTempStops(stringToStops(route.stops));
                           setOpen(true);
                         }}
                       >
