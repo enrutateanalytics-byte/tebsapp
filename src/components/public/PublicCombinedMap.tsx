@@ -95,7 +95,7 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
       return Array.from(latestByUnit.values());
     },
     enabled: unitIds.length > 0,
-    // No refetchInterval - positions update when admin syncs GPS
+    refetchInterval: 20000, // Actualizar cada 20 segundos
   });
 
   const center = useMemo(() => {
