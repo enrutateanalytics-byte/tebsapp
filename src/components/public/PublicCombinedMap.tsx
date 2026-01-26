@@ -36,7 +36,32 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
   const [routeCoordinates, setRouteCoordinates] = useState<google.maps.LatLngLiteral[]>([]);
   const [stops, setStops] = useState<KmlStop[]>([]);
   const [selectedStop, setSelectedStop] = useState<{ stop: KmlStop; index: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<google.maps.LatLngLiteral | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
+
+  // Get user's device location on mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+          setUserLocation(location);
+          // Center map on user location if no route is selected
+          if (mapRef.current && !route) {
+            mapRef.current.setCenter(location);
+            mapRef.current.setZoom(14);
+          }
+        },
+        (error) => {
+          console.log('Geolocation error:', error.message);
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+  }, []);
 
   // Parse route coordinates and stops from stored JSON
   useEffect(() => {
@@ -99,7 +124,7 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
   });
 
   const center = useMemo(() => {
-    // Priority: route coordinates, then unit positions, then default
+    // Priority: route coordinates, then unit positions, then user location, then default
     if (routeCoordinates.length > 0) {
       const sumLat = routeCoordinates.reduce((acc, p) => acc + p.lat, 0);
       const sumLng = routeCoordinates.reduce((acc, p) => acc + p.lng, 0);
@@ -110,8 +135,11 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
       const sumLng = positions.reduce((acc, p) => acc + Number(p.longitude), 0);
       return { lat: sumLat / positions.length, lng: sumLng / positions.length };
     }
+    if (userLocation) {
+      return userLocation;
+    }
     return defaultCenter;
-  }, [routeCoordinates, positions]);
+  }, [routeCoordinates, positions, userLocation]);
 
   // Fit bounds whenever route, stops, or positions change
   useEffect(() => {
