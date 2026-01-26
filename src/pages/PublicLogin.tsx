@@ -4,12 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Bus, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Bus, AtSign, Lock, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 const PublicLogin = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -18,10 +18,10 @@ const PublicLogin = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email.trim() || !password.trim()) {
+    if (!username.trim() || !password.trim()) {
       toast({
         title: 'Error',
-        description: 'Por favor ingresa tu email y contraseña',
+        description: 'Por favor ingresa tu usuario y contraseña',
         variant: 'destructive',
       });
       return;
@@ -29,9 +29,12 @@ const PublicLogin = () => {
 
     setLoading(true);
     try {
+      // Generate internal email from username
+      const internalEmail = `${username.toLowerCase().trim()}@internal.transportepro.app`;
+      
       // Sign in with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: internalEmail,
         password,
       });
 
@@ -40,7 +43,7 @@ const PublicLogin = () => {
         toast({
           title: 'Error de autenticación',
           description: authError.message === 'Invalid login credentials' 
-            ? 'Email o contraseña incorrectos' 
+            ? 'Usuario o contraseña incorrectos' 
             : authError.message,
           variant: 'destructive',
         });
@@ -118,25 +121,26 @@ const PublicLogin = () => {
             <Bus className="w-8 h-8 text-primary" />
           </div>
           <CardTitle className="text-2xl">TransportePro</CardTitle>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-muted-foreground mt-2 text-sm md:text-base">
             Inicia sesión para ver las rutas y ubicaciones en tiempo real
           </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Usuario</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="tu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="username"
+                  type="text"
+                  placeholder="tu.usuario"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ''))}
                   className="pl-10"
                   disabled={loading}
-                  autoComplete="email"
+                  autoComplete="username"
+                  autoCapitalize="none"
                 />
               </div>
             </div>
