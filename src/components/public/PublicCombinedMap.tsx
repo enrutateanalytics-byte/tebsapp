@@ -52,26 +52,39 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
     setStops(routeStops);
   }, [route?.kml_file_path, route?.stops]);
 
-  // Get assignments for the SELECTED route only
+  // Get all assignments for the client (any route belonging to this client)
   const { data: assignments } = useQuery({
-    queryKey: ['public-assignments', route?.id],
+    queryKey: ['public-assignments', clientId],
     queryFn: async () => {
-      if (!route?.id) return [];
+      if (!clientId) return [];
       
+      // Get all routes for this client
+      const { data: clientRoutes, error: routesError } = await supabase
+        .from('routes')
+        .select('id')
+        .eq('client_id', clientId)
+        .eq('is_active', true);
+      
+      if (routesError) throw routesError;
+      if (!clientRoutes || clientRoutes.length === 0) return [];
+      
+      const routeIds = clientRoutes.map(r => r.id);
+      
+      // Get all assignments for these routes
       const { data, error } = await supabase
         .from('assignments')
         .select('unit_id')
-        .eq('route_id', route.id)
-        .eq('status', 'in_progress');
+        .in('route_id', routeIds);
       
       if (error) throw error;
       return data;
     },
-    enabled: !!route?.id,
+    enabled: !!clientId,
   });
 
   const unitIds = useMemo(() => [...new Set(assignments?.map(a => a.unit_id) || [])], [assignments]);
 
+  // Get GPS positions - no automatic polling, only updates when data changes
   const { data: positions } = useQuery({
     queryKey: ['public-gps-positions', unitIds],
     queryFn: async () => {
@@ -95,7 +108,7 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
       return Array.from(latestByUnit.values());
     },
     enabled: unitIds.length > 0,
-    refetchInterval: 30000,
+    // No refetchInterval - positions update when admin syncs GPS
   });
 
   const center = useMemo(() => {
