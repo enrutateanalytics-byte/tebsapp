@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Bus, AtSign, Lock, Eye, EyeOff } from 'lucide-react';
+import { AtSign, Lock, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import tebsaLogo from '@/assets/tebsa-logo.png';
 
 const PublicLogin = () => {
   const [username, setUsername] = useState('');
@@ -117,10 +118,8 @@ const PublicLogin = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-            <Bus className="w-8 h-8 text-primary" />
-          </div>
-          <CardTitle className="text-2xl">TransportePro</CardTitle>
+          <img src={tebsaLogo} alt="TEBSA" className="mx-auto w-24 h-24 object-contain mb-4" />
+          <CardTitle className="text-2xl text-primary">TEBSA</CardTitle>
           <p className="text-muted-foreground mt-2 text-sm md:text-base">
             Inicia sesión para ver las rutas y ubicaciones en tiempo real
           </p>
