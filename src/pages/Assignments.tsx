@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -24,7 +25,7 @@ import {
 } from '@/components/ui/dialog';
 
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, CalendarClock, Search, Sun, Sunset, Moon } from 'lucide-react';
+import { Plus, Pencil, Trash2, CalendarClock, Search, Sun, Sunset, Moon, Bus, Route } from 'lucide-react';
 
 const SHIFTS = [
   { id: 'morning', name: 'Mañana', start: '06:00', end: '14:00', icon: Sun },
@@ -45,6 +46,12 @@ const getShiftLabel = (start: string | null, end: string | null): string => {
   const shiftId = getShiftFromTimes(start, end);
   const shift = SHIFTS.find(s => s.id === shiftId);
   return shift?.name || 'Turno Completo';
+};
+
+const getShiftIcon = (start: string | null, end: string | null) => {
+  const shiftId = getShiftFromTimes(start, end);
+  const shift = SHIFTS.find(s => s.id === shiftId);
+  return shift?.icon || CalendarClock;
 };
 
 interface Assignment {
@@ -214,21 +221,95 @@ const Assignments = () => {
     );
   }, [assignments, searchQuery]);
 
+  // Mobile card view component
+  const AssignmentCard = ({ assignment }: { assignment: Assignment }) => {
+    const ShiftIcon = getShiftIcon(assignment.start_time, assignment.end_time);
+    
+    return (
+      <Card className="mb-3">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              {/* Shift badge */}
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded-full">
+                  <ShiftIcon className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-xs font-medium text-primary">
+                    {getShiftLabel(assignment.start_time, assignment.end_time)}
+                  </span>
+                </div>
+                {assignment.start_time && assignment.end_time && (
+                  <span className="text-xs text-muted-foreground">
+                    {assignment.start_time.slice(0, 5)} - {assignment.end_time.slice(0, 5)}
+                  </span>
+                )}
+              </div>
+              
+              {/* Route */}
+              <div className="flex items-center gap-2 mb-1">
+                <Route className="w-4 h-4 text-muted-foreground shrink-0" />
+                <span className="font-medium truncate">{assignment.routes?.name || '-'}</span>
+              </div>
+              
+              {/* Unit */}
+              <div className="flex items-center gap-2">
+                <Bus className="w-4 h-4 text-muted-foreground shrink-0" />
+                <div className="truncate">
+                  <span>{assignment.units?.plate_number}</span>
+                  {assignment.units?.driver_name && (
+                    <span className="text-muted-foreground text-sm ml-1">
+                      • {assignment.units.driver_name}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* Actions */}
+            <div className="flex gap-1 ml-2 shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handleEdit(assignment)}
+              >
+                <Pencil className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive"
+                onClick={() => {
+                  if (confirm('¿Eliminar esta asignación?')) {
+                    deleteMutation.mutate(assignment.id);
+                  }
+                }}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Asignaciones</h1>
-          <p className="text-muted-foreground mt-1">Programa rutas a unidades específicas</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Asignaciones</h1>
+          <p className="text-muted-foreground text-sm md:text-base mt-1">Programa rutas a unidades específicas</p>
         </div>
         <Dialog open={open} onOpenChange={handleOpenChange}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               Nueva Asignación
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingAssignment ? 'Editar Asignación' : 'Nueva Asignación'}
@@ -268,7 +349,7 @@ const Assignments = () => {
                 <RadioGroup
                   value={selectedShift}
                   onValueChange={(value) => setSelectedShift(value as ShiftId)}
-                  className="grid grid-cols-2 gap-3"
+                  className="grid grid-cols-2 gap-2 sm:gap-3"
                 >
                   {SHIFTS.map((shift) => {
                     const Icon = shift.icon;
@@ -281,16 +362,16 @@ const Assignments = () => {
                         />
                         <Label
                           htmlFor={shift.id}
-                          className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-popover p-3 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                          className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-popover p-2 sm:p-3 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                         >
-                          <Icon className="mb-2 h-5 w-5" />
-                          <span className="text-sm font-medium">{shift.name}</span>
+                          <Icon className="mb-1.5 sm:mb-2 h-4 w-4 sm:h-5 sm:w-5" />
+                          <span className="text-xs sm:text-sm font-medium text-center">{shift.name}</span>
                           {shift.start && shift.end ? (
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-[10px] sm:text-xs text-muted-foreground">
                               {shift.start} - {shift.end}
                             </span>
                           ) : (
-                            <span className="text-xs text-muted-foreground">24 horas</span>
+                            <span className="text-[10px] sm:text-xs text-muted-foreground">24 horas</span>
                           )}
                         </Label>
                       </div>
@@ -306,11 +387,11 @@ const Assignments = () => {
                   defaultValue={editingAssignment?.notes ?? ''}
                 />
               </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto">
                   Cancelar
                 </Button>
-                <Button type="submit">
+                <Button type="submit" className="w-full sm:w-auto">
                   {editingAssignment ? 'Guardar' : 'Crear'}
                 </Button>
               </div>
@@ -319,7 +400,8 @@ const Assignments = () => {
         </Dialog>
       </div>
 
-      <div className="relative max-w-sm">
+      {/* Search */}
+      <div className="relative w-full sm:max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Buscar asignaciones..."
@@ -329,72 +411,83 @@ const Assignments = () => {
         />
       </div>
 
+      {/* Content */}
       {isLoading ? (
         <div className="text-center py-8 text-muted-foreground">Cargando...</div>
       ) : filteredAssignments?.length === 0 ? (
-        <div className="text-center py-16 border rounded-lg bg-muted/20">
-          <CalendarClock className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">No hay asignaciones</h3>
-          <p className="text-muted-foreground mb-4">Comienza programando una ruta a una unidad</p>
+        <div className="text-center py-12 md:py-16 border rounded-lg bg-muted/20">
+          <CalendarClock className="w-10 h-10 md:w-12 md:h-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-base md:text-lg font-medium mb-2">No hay asignaciones</h3>
+          <p className="text-muted-foreground text-sm md:text-base mb-4">Comienza programando una ruta a una unidad</p>
         </div>
       ) : (
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Turno</TableHead>
-                <TableHead>Ruta</TableHead>
-                <TableHead>Unidad / Conductor</TableHead>
-                <TableHead className="w-24">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredAssignments?.map((assignment) => (
-                <TableRow key={assignment.id}>
-                  <TableCell className="font-medium">
-                    {getShiftLabel(assignment.start_time, assignment.end_time)}
-                    {assignment.start_time && assignment.end_time && (
-                      <span className="text-muted-foreground text-xs block">
-                        {assignment.start_time.slice(0, 5)} - {assignment.end_time.slice(0, 5)}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>{assignment.routes?.name || '-'}</TableCell>
-                  <TableCell>
-                    {assignment.units?.plate_number}
-                    {assignment.units?.driver_name && (
-                      <span className="text-muted-foreground text-sm block">
-                        {assignment.units.driver_name}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(assignment)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          if (confirm('¿Eliminar esta asignación?')) {
-                            deleteMutation.mutate(assignment.id);
-                          }
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+        <>
+          {/* Mobile: Card view */}
+          <div className="md:hidden">
+            {filteredAssignments?.map((assignment) => (
+              <AssignmentCard key={assignment.id} assignment={assignment} />
+            ))}
+          </div>
+          
+          {/* Desktop: Table view */}
+          <div className="hidden md:block border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Turno</TableHead>
+                  <TableHead>Ruta</TableHead>
+                  <TableHead>Unidad / Conductor</TableHead>
+                  <TableHead className="w-24">Acciones</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {filteredAssignments?.map((assignment) => (
+                  <TableRow key={assignment.id}>
+                    <TableCell className="font-medium">
+                      {getShiftLabel(assignment.start_time, assignment.end_time)}
+                      {assignment.start_time && assignment.end_time && (
+                        <span className="text-muted-foreground text-xs block">
+                          {assignment.start_time.slice(0, 5)} - {assignment.end_time.slice(0, 5)}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>{assignment.routes?.name || '-'}</TableCell>
+                    <TableCell>
+                      {assignment.units?.plate_number}
+                      {assignment.units?.driver_name && (
+                        <span className="text-muted-foreground text-sm block">
+                          {assignment.units.driver_name}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(assignment)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            if (confirm('¿Eliminar esta asignación?')) {
+                              deleteMutation.mutate(assignment.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
     </div>
   );

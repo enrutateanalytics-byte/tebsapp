@@ -7,10 +7,14 @@ import {
   Bus, 
   CalendarClock,
   MapPin,
-  LogOut
+  LogOut,
+  Menu,
+  X
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { useState } from 'react';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
@@ -21,12 +25,12 @@ const menuItems = [
   { icon: MapPin, label: 'Rastreo GPS', path: '/tracking' },
 ];
 
-const Sidebar = () => {
+const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
   const { signOut, user } = useAuth();
 
   return (
-    <aside className="w-64 bg-card border-r border-border h-screen flex flex-col">
-      <div className="p-6 border-b border-border">
+    <>
+      <div className="p-4 md:p-6 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
             <Bus className="w-5 h-5 text-primary" />
@@ -38,11 +42,12 @@ const Sidebar = () => {
         </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-3 md:p-4 space-y-1">
         {menuItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
+            onClick={onNavigate}
             className={({ isActive }) =>
               cn(
                 'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
@@ -58,9 +63,9 @@ const Sidebar = () => {
         ))}
       </nav>
 
-      <div className="p-4 border-t border-border">
-        <div className="flex items-center gap-3 px-4 py-2 mb-2">
-          <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-xs font-medium">
+      <div className="p-3 md:p-4 border-t border-border">
+        <div className="flex items-center gap-3 px-3 md:px-4 py-2 mb-2">
+          <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center text-xs font-medium shrink-0">
             {user?.email?.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
@@ -77,6 +82,36 @@ const Sidebar = () => {
           Cerrar Sesión
         </Button>
       </div>
+    </>
+  );
+};
+
+// Mobile sidebar using Sheet
+export const MobileSidebar = () => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="md:hidden">
+          <Menu className="h-6 w-6" />
+          <span className="sr-only">Abrir menú</span>
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="p-0 w-72">
+        <div className="flex flex-col h-full">
+          <SidebarContent onNavigate={() => setOpen(false)} />
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+};
+
+// Desktop sidebar
+const Sidebar = () => {
+  return (
+    <aside className="hidden md:flex w-64 bg-card border-r border-border h-screen flex-col">
+      <SidebarContent />
     </aside>
   );
 };
