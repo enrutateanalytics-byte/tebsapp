@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { GoogleMap, Marker, Polyline } from '@react-google-maps/api';
+import { GoogleMap, Marker, Polyline, InfoWindow } from '@react-google-maps/api';
 import { supabase } from '@/integrations/supabase/client';
 import { stringToCoordinates, stringToStops, KmlStop } from '@/lib/kmlParser';
 
@@ -35,6 +35,7 @@ const defaultCenter = { lat: 19.4326, lng: -99.1332 };
 const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
   const [routeCoordinates, setRouteCoordinates] = useState<google.maps.LatLngLiteral[]>([]);
   const [stops, setStops] = useState<KmlStop[]>([]);
+  const [selectedStop, setSelectedStop] = useState<{ stop: KmlStop; index: number } | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
 
   // Parse route coordinates and stops from stored JSON
@@ -190,6 +191,7 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
           key={`stop-${index}`}
           position={{ lat: stop.lat, lng: stop.lng }}
           title={stop.name || `Parada ${index + 1}`}
+          onClick={() => setSelectedStop({ stop, index })}
           icon={{
             url: 'data:image/svg+xml,' + encodeURIComponent(`
               <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
@@ -202,6 +204,24 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
           }}
         />
       ))}
+
+      {/* Stop InfoWindow */}
+      {selectedStop && (
+        <InfoWindow
+          position={{ lat: selectedStop.stop.lat, lng: selectedStop.stop.lng }}
+          onCloseClick={() => setSelectedStop(null)}
+        >
+          <div className="p-1 min-w-[150px]">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                {selectedStop.index + 1}
+              </span>
+              <span className="font-semibold text-sm text-gray-800">Parada {selectedStop.index + 1}</span>
+            </div>
+            <p className="text-sm text-gray-700">{selectedStop.stop.name || 'Sin nombre'}</p>
+          </div>
+        </InfoWindow>
+      )}
 
       {/* Unit markers */}
       {positions?.map((pos) => (
