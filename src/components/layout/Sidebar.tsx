@@ -9,12 +9,12 @@ import {
   MapPin,
   LogOut,
   Menu,
-  X
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useState } from 'react';
+import tebsaLogo from '@/assets/tebsa-logo.png';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
@@ -32,11 +32,9 @@ const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
     <>
       <div className="p-4 md:p-6 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-            <Bus className="w-5 h-5 text-primary" />
-          </div>
+          <img src={tebsaLogo} alt="TEBSA" className="w-12 h-12 object-contain" />
           <div>
-            <h1 className="font-bold text-lg">TransportePro</h1>
+            <h1 className="font-bold text-lg text-primary">TEBSA</h1>
             <p className="text-xs text-muted-foreground">Gestión de Flota</p>
           </div>
         </div>

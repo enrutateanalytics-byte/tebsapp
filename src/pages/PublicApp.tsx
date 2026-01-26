@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bus, LogOut, MapPin, Navigation } from 'lucide-react';
+import { LogOut, MapPin, Navigation } from 'lucide-react';
+import tebsaLogo from '@/assets/tebsa-logo.png';
 import GoogleMapsProvider from '@/components/maps/GoogleMapsProvider';
 import PublicCombinedMap from '@/components/public/PublicCombinedMap';
 import type { User, Session } from '@supabase/supabase-js';
@@ -121,9 +122,7 @@ const PublicApp = () => {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center animate-pulse">
-            <Bus className="w-6 h-6 text-primary" />
-          </div>
+          <img src={tebsaLogo} alt="TEBSA" className="w-16 h-16 object-contain animate-pulse" />
           <p className="text-sm text-muted-foreground">Cargando...</p>
         </div>
       </div>
@@ -138,12 +137,10 @@ const PublicApp = () => {
     <div className="h-screen w-screen flex flex-col bg-background overflow-hidden">
       {/* Compact Native-style Header */}
       <header className="bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between shadow-lg z-50 safe-area-top">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-            <Bus className="w-4 h-4" />
-          </div>
+        <div className="flex items-center gap-3">
+          <img src={tebsaLogo} alt="TEBSA" className="w-10 h-10 object-contain bg-white rounded-lg p-1" />
           <div className="leading-tight">
-            <h1 className="font-semibold text-sm">TransportePro</h1>
+            <h1 className="font-semibold text-sm">TEBSA Transportes</h1>
             <p className="text-[10px] opacity-80">{clientName}</p>
           </div>
         </div>
