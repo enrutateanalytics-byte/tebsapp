@@ -118,9 +118,8 @@ const PublicLogin = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <img src={tebsaLogo} alt="TEBSA" className="mx-auto w-24 h-24 object-contain mb-4" />
-          <CardTitle className="text-2xl text-primary">TEBSA</CardTitle>
-          <p className="text-muted-foreground mt-2 text-sm md:text-base">
+          <img src={tebsaLogo} alt="TEBSA" className="mx-auto w-28 h-28 object-contain mb-2" />
+          <p className="text-muted-foreground text-sm md:text-base">
             Inicia sesión para ver las rutas y ubicaciones en tiempo real
           </p>
         </CardHeader>
