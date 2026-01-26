@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Bus, MapPin, RefreshCw } from 'lucide-react';
+import { Plus, Pencil, Trash2, Bus, MapPin, RefreshCw, Search } from 'lucide-react';
 
 interface Unit {
   id: string;
@@ -43,6 +43,7 @@ const Units = () => {
   const [open, setOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
 
   const { data: units, isLoading } = useQuery({
@@ -140,6 +141,17 @@ const Units = () => {
       createMutation.mutate(unit);
     }
   };
+
+  const filteredUnits = useMemo(() => {
+    if (!units || !searchQuery.trim()) return units;
+    const query = searchQuery.toLowerCase();
+    return units.filter((unit) =>
+      unit.plate_number.toLowerCase().includes(query) ||
+      unit.brand?.toLowerCase().includes(query) ||
+      unit.model?.toLowerCase().includes(query) ||
+      unit.driver_name?.toLowerCase().includes(query)
+    );
+  }, [units, searchQuery]);
 
   return (
     <div className="space-y-6">
@@ -286,9 +298,19 @@ const Units = () => {
         </div>
       </div>
 
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar unidades..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       {isLoading ? (
         <div className="text-center py-8 text-muted-foreground">Cargando...</div>
-      ) : units?.length === 0 ? (
+      ) : filteredUnits?.length === 0 ? (
         <div className="text-center py-16 border rounded-lg bg-muted/20">
           <Bus className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">No hay unidades</h3>
@@ -309,7 +331,7 @@ const Units = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {units?.map((unit) => (
+              {filteredUnits?.map((unit) => (
                 <TableRow key={unit.id}>
                   <TableCell className="font-medium">{unit.plate_number}</TableCell>
                   <TableCell>
