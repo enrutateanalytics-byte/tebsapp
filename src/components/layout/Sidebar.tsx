@@ -35,7 +35,7 @@ const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
           <img src={tebsaLogo} alt="TEBSA" className="w-12 h-12 object-contain" />
           <div>
             <h1 className="font-bold text-lg text-primary">TEBSA</h1>
-            <p className="text-xs text-muted-foreground">Gestión de Flota</p>
+            <p className="text-xs text-muted-foreground">Gestión de Transporte</p>
           </div>
         </div>
       </div>
