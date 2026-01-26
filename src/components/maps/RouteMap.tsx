@@ -1,5 +1,5 @@
-import { GoogleMap, Polyline, Marker } from '@react-google-maps/api';
-import { useMemo } from 'react';
+import { GoogleMap, Polyline, Marker, InfoWindow } from '@react-google-maps/api';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { KmlStop } from '@/lib/kmlParser';
@@ -26,6 +26,7 @@ const containerStyle = {
 };
 
 const RouteMap = ({ coordinates, stops = [], routeId, className }: RouteMapProps) => {
+  const [selectedStop, setSelectedStop] = useState<{ stop: KmlStop; index: number } | null>(null);
   // Get assignments for this route
   const { data: assignments } = useQuery({
     queryKey: ['route-assignments', routeId],
@@ -127,14 +128,37 @@ const RouteMap = ({ coordinates, stops = [], routeId, className }: RouteMapProps
             key={`stop-${index}`}
             position={{ lat: stop.lat, lng: stop.lng }}
             title={stop.name || `Parada ${index + 1}`}
-            label={{
-              text: String(index + 1),
-              color: 'white',
-              fontWeight: 'bold',
-              fontSize: '12px'
+            onClick={() => setSelectedStop({ stop, index })}
+            icon={{
+              url: 'data:image/svg+xml,' + encodeURIComponent(`
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+                  <circle cx="14" cy="14" r="12" fill="hsl(262, 83%, 58%)" stroke="white" stroke-width="2"/>
+                  <text x="14" y="18" text-anchor="middle" fill="white" font-size="11" font-weight="bold" font-family="Arial">${index + 1}</text>
+                </svg>
+              `),
+              scaledSize: new window.google.maps.Size(28, 28),
+              anchor: new window.google.maps.Point(14, 14),
             }}
           />
         ))}
+        
+        {/* Stop InfoWindow */}
+        {selectedStop && (
+          <InfoWindow
+            position={{ lat: selectedStop.stop.lat, lng: selectedStop.stop.lng }}
+            onCloseClick={() => setSelectedStop(null)}
+          >
+            <div className="p-1 min-w-[150px]">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                  {selectedStop.index + 1}
+                </span>
+                <span className="font-semibold text-sm text-gray-800">Parada {selectedStop.index + 1}</span>
+              </div>
+              <p className="text-sm text-gray-700">{selectedStop.stop.name || 'Sin nombre'}</p>
+            </div>
+          </InfoWindow>
+        )}
         
         {/* Unit markers */}
         {gpsPositions?.map((pos) => (
