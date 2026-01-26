@@ -1,11 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Bus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { MapPin, Bus, RefreshCw } from 'lucide-react';
 import GoogleMapsProvider from '@/components/maps/GoogleMapsProvider';
-import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
-import { useMemo, useCallback } from 'react';
+import { GoogleMap, Marker } from '@react-google-maps/api';
+import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
 interface GpsPosition {
   id: string;
@@ -24,6 +26,9 @@ const containerStyle = {
 };
 
 const Tracking = () => {
+  const [isSyncing, setIsSyncing] = useState(false);
+  const queryClient = useQueryClient();
+
   const { data: positions, isLoading } = useQuery({
     queryKey: ['gps-positions'],
     queryFn: async () => {
@@ -45,7 +50,7 @@ const Tracking = () => {
       
       return Array.from(latestByUnit.values());
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    // No refetchInterval - only manual sync
   });
 
   const { data: units } = useQuery({
@@ -76,11 +81,41 @@ const Tracking = () => {
   const unitsWithPosition = positions?.map((p) => p.unit_id) ?? [];
   const unitsWithoutPosition = units?.filter((u) => !unitsWithPosition.includes(u.id)) ?? [];
 
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-tracksolid', {
+        method: 'POST',
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success(`Sincronización completada: ${data.synced} unidades actualizadas`);
+        // Refresh the positions data
+        queryClient.invalidateQueries({ queryKey: ['gps-positions'] });
+      } else {
+        toast.error(data?.error || 'Error al sincronizar');
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast.error('Error al conectar con el servicio GPS');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Rastreo GPS</h1>
-        <p className="text-muted-foreground mt-1">Seguimiento en tiempo real de las unidades</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Rastreo GPS</h1>
+          <p className="text-muted-foreground mt-1">Seguimiento en tiempo real de las unidades</p>
+        </div>
+        <Button onClick={handleSync} disabled={isSyncing}>
+          <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+          {isSyncing ? 'Sincronizando...' : 'Sincronizar GPS'}
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
