@@ -6,13 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import {
   Table,
   TableBody,
@@ -62,6 +56,8 @@ const Assignments = () => {
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
   const [allDay, setAllDay] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedRouteId, setSelectedRouteId] = useState<string>('');
+  const [selectedUnitId, setSelectedUnitId] = useState<string>('');
   const queryClient = useQueryClient();
 
   const { data: assignments, isLoading } = useQuery({
@@ -147,9 +143,15 @@ const Assignments = () => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    
+    if (!selectedRouteId || !selectedUnitId) {
+      toast.error('Por favor selecciona ruta y unidad');
+      return;
+    }
+    
     const assignment = {
-      route_id: formData.get('route_id') as string,
-      unit_id: formData.get('unit_id') as string,
+      route_id: selectedRouteId,
+      unit_id: selectedUnitId,
       assignment_date: formData.get('assignment_date') as string,
       start_time: allDay ? null : (formData.get('start_time') as string || null),
       end_time: allDay ? null : (formData.get('end_time') as string || null),
@@ -168,12 +170,16 @@ const Assignments = () => {
     if (!o) {
       setEditingAssignment(null);
       setAllDay(true);
+      setSelectedRouteId('');
+      setSelectedUnitId('');
     }
   };
 
   const handleEdit = (assignment: Assignment) => {
     setEditingAssignment(assignment);
     setAllDay(!assignment.start_time && !assignment.end_time);
+    setSelectedRouteId(assignment.route_id);
+    setSelectedUnitId(assignment.unit_id);
     setOpen(true);
   };
 
@@ -209,34 +215,32 @@ const Assignments = () => {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="route_id">Ruta *</Label>
-                <Select name="route_id" defaultValue={editingAssignment?.route_id} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar ruta" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {routes?.map((route) => (
-                      <SelectItem key={route.id} value={route.id}>
-                        {route.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Ruta *</Label>
+                <SearchableSelect
+                  options={routes?.map((route) => ({
+                    value: route.id,
+                    label: route.name,
+                  })) || []}
+                  value={selectedRouteId}
+                  onValueChange={setSelectedRouteId}
+                  placeholder="Seleccionar ruta"
+                  searchPlaceholder="Buscar ruta..."
+                  emptyMessage="No se encontraron rutas."
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="unit_id">Unidad *</Label>
-                <Select name="unit_id" defaultValue={editingAssignment?.unit_id} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar unidad" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units?.map((unit) => (
-                      <SelectItem key={unit.id} value={unit.id}>
-                        {unit.plate_number} {unit.driver_name && `- ${unit.driver_name}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Unidad *</Label>
+                <SearchableSelect
+                  options={units?.map((unit) => ({
+                    value: unit.id,
+                    label: `${unit.plate_number}${unit.driver_name ? ` - ${unit.driver_name}` : ''}`,
+                  })) || []}
+                  value={selectedUnitId}
+                  onValueChange={setSelectedUnitId}
+                  placeholder="Seleccionar unidad"
+                  searchPlaceholder="Buscar unidad..."
+                  emptyMessage="No se encontraron unidades."
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="assignment_date">Fecha *</Label>
