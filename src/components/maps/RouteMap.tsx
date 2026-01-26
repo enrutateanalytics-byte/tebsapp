@@ -2,9 +2,11 @@ import { GoogleMap, Polyline, Marker } from '@react-google-maps/api';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { KmlStop } from '@/lib/kmlParser';
 
 interface RouteMapProps {
   coordinates: { lat: number; lng: number }[];
+  stops?: KmlStop[];
   routeId?: string;
   className?: string;
 }
@@ -23,7 +25,7 @@ const containerStyle = {
   height: '100%',
 };
 
-const RouteMap = ({ coordinates, routeId, className }: RouteMapProps) => {
+const RouteMap = ({ coordinates, stops = [], routeId, className }: RouteMapProps) => {
   // Get assignments for this route
   const { data: assignments } = useQuery({
     queryKey: ['route-assignments', routeId],
@@ -81,17 +83,20 @@ const RouteMap = ({ coordinates, routeId, className }: RouteMapProps) => {
 
   const bounds = useMemo(() => {
     if (!window.google) return null;
-    if (coordinates.length === 0 && (!gpsPositions || gpsPositions.length === 0)) return null;
+    if (coordinates.length === 0 && (!gpsPositions || gpsPositions.length === 0) && stops.length === 0) return null;
     
     const bounds = new window.google.maps.LatLngBounds();
     coordinates.forEach((coord) => {
       bounds.extend(coord);
     });
+    stops.forEach((stop) => {
+      bounds.extend({ lat: stop.lat, lng: stop.lng });
+    });
     gpsPositions?.forEach((pos) => {
       bounds.extend({ lat: Number(pos.latitude), lng: Number(pos.longitude) });
     });
     return bounds;
-  }, [coordinates, gpsPositions]);
+  }, [coordinates, stops, gpsPositions]);
 
   return (
     <div className={className}>
@@ -115,6 +120,21 @@ const RouteMap = ({ coordinates, routeId, className }: RouteMapProps) => {
             }}
           />
         )}
+        
+        {/* Stop markers */}
+        {stops.map((stop, index) => (
+          <Marker
+            key={`stop-${index}`}
+            position={{ lat: stop.lat, lng: stop.lng }}
+            title={stop.name || `Parada ${index + 1}`}
+            label={{
+              text: String(index + 1),
+              color: 'white',
+              fontWeight: 'bold',
+              fontSize: '12px'
+            }}
+          />
+        ))}
         
         {/* Unit markers */}
         {gpsPositions?.map((pos) => (

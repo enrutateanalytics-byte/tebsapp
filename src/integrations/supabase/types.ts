@@ -275,6 +275,7 @@ export type Database = {
           kml_file_path: string | null
           name: string
           origin_address: string | null
+          stops: Json | null
           updated_at: string
         }
         Insert: {
@@ -289,6 +290,7 @@ export type Database = {
           kml_file_path?: string | null
           name: string
           origin_address?: string | null
+          stops?: Json | null
           updated_at?: string
         }
         Update: {
@@ -303,6 +305,7 @@ export type Database = {
           kml_file_path?: string | null
           name?: string
           origin_address?: string | null
+          stops?: Json | null
           updated_at?: string
         }
         Relationships: [
