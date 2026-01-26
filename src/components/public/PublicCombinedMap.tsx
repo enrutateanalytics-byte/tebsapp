@@ -52,39 +52,26 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
     setStops(routeStops);
   }, [route?.kml_file_path, route?.stops]);
 
-  // Get all assignments for the client (any route belonging to this client)
+  // Get assignments ONLY for the selected route
   const { data: assignments } = useQuery({
-    queryKey: ['public-assignments', clientId],
+    queryKey: ['public-assignments', route?.id],
     queryFn: async () => {
-      if (!clientId) return [];
+      if (!route?.id) return [];
       
-      // Get all routes for this client
-      const { data: clientRoutes, error: routesError } = await supabase
-        .from('routes')
-        .select('id')
-        .eq('client_id', clientId)
-        .eq('is_active', true);
-      
-      if (routesError) throw routesError;
-      if (!clientRoutes || clientRoutes.length === 0) return [];
-      
-      const routeIds = clientRoutes.map(r => r.id);
-      
-      // Get all assignments for these routes
       const { data, error } = await supabase
         .from('assignments')
         .select('unit_id')
-        .in('route_id', routeIds);
+        .eq('route_id', route.id);
       
       if (error) throw error;
       return data;
     },
-    enabled: !!clientId,
+    enabled: !!route?.id,
   });
 
   const unitIds = useMemo(() => [...new Set(assignments?.map(a => a.unit_id) || [])], [assignments]);
 
-  // Get GPS positions - no automatic polling, only updates when data changes
+  // Get GPS positions only for units assigned to the selected route
   const { data: positions } = useQuery({
     queryKey: ['public-gps-positions', unitIds],
     queryFn: async () => {
