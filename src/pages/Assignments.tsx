@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import { SearchableSelect } from '@/components/ui/searchable-select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Table,
   TableBody,
@@ -24,9 +24,28 @@ import {
 } from '@/components/ui/dialog';
 
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, CalendarClock, Search } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { Plus, Pencil, Trash2, CalendarClock, Search, Sun, Sunset, Moon } from 'lucide-react';
+
+const SHIFTS = [
+  { id: 'morning', name: 'Mañana', start: '06:00', end: '14:00', icon: Sun },
+  { id: 'afternoon', name: 'Tarde', start: '14:00', end: '22:00', icon: Sunset },
+  { id: 'night', name: 'Noche', start: '22:00', end: '06:00', icon: Moon },
+  { id: 'full', name: 'Turno Completo', start: null, end: null, icon: CalendarClock },
+] as const;
+
+type ShiftId = typeof SHIFTS[number]['id'];
+
+const getShiftFromTimes = (start: string | null, end: string | null): ShiftId => {
+  if (!start && !end) return 'full';
+  const shift = SHIFTS.find(s => s.start === start && s.end === end);
+  return shift?.id || 'full';
+};
+
+const getShiftLabel = (start: string | null, end: string | null): string => {
+  const shiftId = getShiftFromTimes(start, end);
+  const shift = SHIFTS.find(s => s.id === shiftId);
+  return shift?.name || 'Turno Completo';
+};
 
 interface Assignment {
   id: string;
@@ -54,7 +73,7 @@ interface UnitOption {
 const Assignments = () => {
   const [open, setOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
-  const [allDay, setAllDay] = useState(true);
+  const [selectedShift, setSelectedShift] = useState<ShiftId>('full');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRouteId, setSelectedRouteId] = useState<string>('');
   const [selectedUnitId, setSelectedUnitId] = useState<string>('');
@@ -149,12 +168,14 @@ const Assignments = () => {
       return;
     }
     
+    const shift = SHIFTS.find(s => s.id === selectedShift);
+    
     const assignment = {
       route_id: selectedRouteId,
       unit_id: selectedUnitId,
-      assignment_date: formData.get('assignment_date') as string,
-      start_time: allDay ? null : (formData.get('start_time') as string || null),
-      end_time: allDay ? null : (formData.get('end_time') as string || null),
+      assignment_date: new Date().toISOString().split('T')[0],
+      start_time: shift?.start || null,
+      end_time: shift?.end || null,
       notes: formData.get('notes') as string || null,
     };
 
@@ -169,7 +190,7 @@ const Assignments = () => {
     setOpen(o);
     if (!o) {
       setEditingAssignment(null);
-      setAllDay(true);
+      setSelectedShift('full');
       setSelectedRouteId('');
       setSelectedUnitId('');
     }
@@ -177,7 +198,7 @@ const Assignments = () => {
 
   const handleEdit = (assignment: Assignment) => {
     setEditingAssignment(assignment);
-    setAllDay(!assignment.start_time && !assignment.end_time);
+    setSelectedShift(getShiftFromTimes(assignment.start_time, assignment.end_time));
     setSelectedRouteId(assignment.route_id);
     setSelectedUnitId(assignment.unit_id);
     setOpen(true);
@@ -242,46 +263,41 @@ const Assignments = () => {
                   emptyMessage="No se encontraron unidades."
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="assignment_date">Fecha *</Label>
-                <Input
-                  id="assignment_date"
-                  name="assignment_date"
-                  type="date"
-                  defaultValue={editingAssignment?.assignment_date ?? new Date().toISOString().split('T')[0]}
-                  required
-                />
+              <div className="space-y-3">
+                <Label>Turno *</Label>
+                <RadioGroup
+                  value={selectedShift}
+                  onValueChange={(value) => setSelectedShift(value as ShiftId)}
+                  className="grid grid-cols-2 gap-3"
+                >
+                  {SHIFTS.map((shift) => {
+                    const Icon = shift.icon;
+                    return (
+                      <div key={shift.id}>
+                        <RadioGroupItem
+                          value={shift.id}
+                          id={shift.id}
+                          className="peer sr-only"
+                        />
+                        <Label
+                          htmlFor={shift.id}
+                          className="flex flex-col items-center justify-center rounded-lg border-2 border-muted bg-popover p-3 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                        >
+                          <Icon className="mb-2 h-5 w-5" />
+                          <span className="text-sm font-medium">{shift.name}</span>
+                          {shift.start && shift.end ? (
+                            <span className="text-xs text-muted-foreground">
+                              {shift.start} - {shift.end}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">24 horas</span>
+                          )}
+                        </Label>
+                      </div>
+                    );
+                  })}
+                </RadioGroup>
               </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="all_day"
-                  checked={allDay}
-                  onCheckedChange={(checked) => setAllDay(checked === true)}
-                />
-                <Label htmlFor="all_day" className="cursor-pointer">Todo el día</Label>
-              </div>
-              {!allDay && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="start_time">Hora inicio</Label>
-                    <Input
-                      id="start_time"
-                      name="start_time"
-                      type="time"
-                      defaultValue={editingAssignment?.start_time ?? ''}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="end_time">Hora fin</Label>
-                    <Input
-                      id="end_time"
-                      name="end_time"
-                      type="time"
-                      defaultValue={editingAssignment?.end_time ?? ''}
-                    />
-                  </div>
-                </div>
-              )}
               <div className="space-y-2">
                 <Label htmlFor="notes">Notas</Label>
                 <Textarea
@@ -326,10 +342,9 @@ const Assignments = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Fecha</TableHead>
+                <TableHead>Turno</TableHead>
                 <TableHead>Ruta</TableHead>
                 <TableHead>Unidad / Conductor</TableHead>
-                <TableHead>Horario</TableHead>
                 <TableHead className="w-24">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -337,7 +352,12 @@ const Assignments = () => {
               {filteredAssignments?.map((assignment) => (
                 <TableRow key={assignment.id}>
                   <TableCell className="font-medium">
-                    {format(new Date(assignment.assignment_date), 'dd MMM yyyy', { locale: es })}
+                    {getShiftLabel(assignment.start_time, assignment.end_time)}
+                    {assignment.start_time && assignment.end_time && (
+                      <span className="text-muted-foreground text-xs block">
+                        {assignment.start_time.slice(0, 5)} - {assignment.end_time.slice(0, 5)}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell>{assignment.routes?.name || '-'}</TableCell>
                   <TableCell>
@@ -347,11 +367,6 @@ const Assignments = () => {
                         {assignment.units.driver_name}
                       </span>
                     )}
-                  </TableCell>
-                  <TableCell>
-                    {assignment.start_time && assignment.end_time
-                      ? `${assignment.start_time.slice(0, 5)} - ${assignment.end_time.slice(0, 5)}`
-                      : assignment.start_time?.slice(0, 5) || '-'}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
