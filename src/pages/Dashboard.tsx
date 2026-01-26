@@ -31,40 +31,40 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Resumen general del sistema</p>
+        <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
+        <p className="text-muted-foreground text-sm md:text-base mt-1">Resumen general del sistema</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
         {statCards.map((stat) => (
           <Card key={stat.title}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 md:p-6 md:pb-2">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 {stat.title}
               </CardTitle>
-              <stat.icon className={`w-5 h-5 ${stat.color}`} />
+              <stat.icon className={`w-4 h-4 md:w-5 md:h-5 ${stat.color}`} />
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{stat.value}</div>
+            <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+              <div className="text-2xl md:text-3xl font-bold">{stat.value}</div>
             </CardContent>
           </Card>
         ))}
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Bienvenido a TransportePro</CardTitle>
+        <CardHeader className="p-4 md:p-6">
+          <CardTitle className="text-lg md:text-xl">Bienvenido a TransportePro</CardTitle>
         </CardHeader>
-        <CardContent className="text-muted-foreground">
+        <CardContent className="text-muted-foreground text-sm md:text-base p-4 pt-0 md:p-6 md:pt-0">
           <p>Este sistema te permite gestionar:</p>
           <ul className="list-disc list-inside mt-2 space-y-1">
-            <li><strong>Clientes:</strong> Empresas que contratan el servicio de transporte</li>
-            <li><strong>Rutas:</strong> Recorridos con visualización en mapa mediante archivos KML</li>
-            <li><strong>Unidades:</strong> Vehículos disponibles con información del conductor</li>
-            <li><strong>Asignaciones:</strong> Programación de rutas a unidades específicas</li>
-            <li><strong>Rastreo GPS:</strong> Seguimiento en tiempo real de las unidades</li>
+            <li><strong>Clientes:</strong> Empresas que contratan el servicio</li>
+            <li><strong>Rutas:</strong> Recorridos con visualización en mapa</li>
+            <li><strong>Unidades:</strong> Vehículos con información del conductor</li>
+            <li><strong>Asignaciones:</strong> Programación de rutas</li>
+            <li><strong>Rastreo GPS:</strong> Seguimiento en tiempo real</li>
           </ul>
         </CardContent>
       </Card>

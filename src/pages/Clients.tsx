@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -27,8 +28,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Building2, Users, Search } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Plus, Pencil, Trash2, Building2, Users, Search, Mail, Phone, User } from 'lucide-react';
 import ClientUsersManager from '@/components/clients/ClientUsersManager';
 
 interface Client {
@@ -132,21 +132,90 @@ const Clients = () => {
     );
   }, [clients, searchQuery]);
 
+  // Mobile card component
+  const ClientCard = ({ client }: { client: Client }) => (
+    <Card className="mb-3">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold truncate">{client.name}</h3>
+            
+            {client.contact_name && (
+              <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+                <User className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{client.contact_name}</span>
+              </div>
+            )}
+            
+            {client.contact_email && (
+              <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                <Mail className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{client.contact_email}</span>
+              </div>
+            )}
+            
+            {client.contact_phone && (
+              <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                <Phone className="w-3.5 h-3.5 shrink-0" />
+                <span>{client.contact_phone}</span>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex gap-1 ml-2 shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setUsersSheetClient(client)}
+            >
+              <Users className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => {
+                setEditingClient(client);
+                setOpen(true);
+              }}
+            >
+              <Pencil className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive"
+              onClick={() => {
+                if (confirm('¿Eliminar este cliente?')) {
+                  deleteMutation.mutate(client.id);
+                }
+              }}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Clientes</h1>
-          <p className="text-muted-foreground mt-1">Gestiona las empresas clientes</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Clientes</h1>
+          <p className="text-muted-foreground text-sm md:text-base mt-1">Gestiona las empresas clientes</p>
         </div>
         <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setEditingClient(null); }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               Nuevo Cliente
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingClient ? 'Editar Cliente' : 'Nuevo Cliente'}
@@ -170,7 +239,7 @@ const Clients = () => {
                   defaultValue={editingClient?.contact_name ?? ''}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="contact_email">Email</Label>
                   <Input
@@ -205,11 +274,11 @@ const Clients = () => {
                   defaultValue={editingClient?.notes ?? ''}
                 />
               </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto">
                   Cancelar
                 </Button>
-                <Button type="submit">
+                <Button type="submit" className="w-full sm:w-auto">
                   {editingClient ? 'Guardar' : 'Crear'}
                 </Button>
               </div>
@@ -218,7 +287,8 @@ const Clients = () => {
         </Dialog>
       </div>
 
-      <div className="relative max-w-sm">
+      {/* Search */}
+      <div className="relative w-full sm:max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Buscar clientes..."
@@ -228,79 +298,90 @@ const Clients = () => {
         />
       </div>
 
+      {/* Content */}
       {isLoading ? (
         <div className="text-center py-8 text-muted-foreground">Cargando...</div>
       ) : filteredClients?.length === 0 ? (
-        <div className="text-center py-16 border rounded-lg bg-muted/20">
-          <Building2 className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">No hay clientes</h3>
-          <p className="text-muted-foreground mb-4">Comienza agregando tu primer cliente</p>
+        <div className="text-center py-12 md:py-16 border rounded-lg bg-muted/20">
+          <Building2 className="w-10 h-10 md:w-12 md:h-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-base md:text-lg font-medium mb-2">No hay clientes</h3>
+          <p className="text-muted-foreground text-sm md:text-base mb-4">Comienza agregando tu primer cliente</p>
         </div>
       ) : (
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Empresa</TableHead>
-                <TableHead>Usuarios</TableHead>
-                <TableHead>Contacto</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Teléfono</TableHead>
-                <TableHead className="w-32">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredClients?.map((client) => (
-                <TableRow key={client.id}>
-                  <TableCell className="font-medium">{client.name}</TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setUsersSheetClient(client)}
-                    >
-                      <Users className="w-4 h-4 mr-2" />
-                      Gestionar
-                    </Button>
-                  </TableCell>
-                  <TableCell>{client.contact_name || '-'}</TableCell>
-                  <TableCell>{client.contact_email || '-'}</TableCell>
-                  <TableCell>{client.contact_phone || '-'}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setEditingClient(client);
-                          setOpen(true);
-                        }}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          if (confirm('¿Eliminar este cliente?')) {
-                            deleteMutation.mutate(client.id);
-                          }
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+        <>
+          {/* Mobile: Card view */}
+          <div className="md:hidden">
+            {filteredClients?.map((client) => (
+              <ClientCard key={client.id} client={client} />
+            ))}
+          </div>
+          
+          {/* Desktop: Table view */}
+          <div className="hidden md:block border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Empresa</TableHead>
+                  <TableHead>Usuarios</TableHead>
+                  <TableHead>Contacto</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Teléfono</TableHead>
+                  <TableHead className="w-32">Acciones</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {filteredClients?.map((client) => (
+                  <TableRow key={client.id}>
+                    <TableCell className="font-medium">{client.name}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setUsersSheetClient(client)}
+                      >
+                        <Users className="w-4 h-4 mr-2" />
+                        Gestionar
+                      </Button>
+                    </TableCell>
+                    <TableCell>{client.contact_name || '-'}</TableCell>
+                    <TableCell>{client.contact_email || '-'}</TableCell>
+                    <TableCell>{client.contact_phone || '-'}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditingClient(client);
+                            setOpen(true);
+                          }}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            if (confirm('¿Eliminar este cliente?')) {
+                              deleteMutation.mutate(client.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
 
       {/* Users Management Sheet */}
       <Sheet open={!!usersSheetClient} onOpenChange={(open) => !open && setUsersSheetClient(null)}>
-        <SheetContent className="sm:max-w-xl w-full">
+        <SheetContent className="w-full sm:max-w-xl p-4 sm:p-6">
           <SheetHeader>
             <SheetTitle>Gestión de Usuarios</SheetTitle>
           </SheetHeader>
