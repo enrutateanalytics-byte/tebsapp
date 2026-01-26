@@ -20,6 +20,13 @@ interface GpsPosition {
   units?: { plate_number: string } | null;
 }
 
+interface AnimatedPosition {
+  current: google.maps.LatLngLiteral;
+  target: google.maps.LatLngLiteral;
+  plateNumber: string;
+  unitId: string;
+}
+
 interface PublicCombinedMapProps {
   route: RouteData | null;
   clientId: string;
@@ -37,7 +44,10 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
   const [stops, setStops] = useState<KmlStop[]>([]);
   const [selectedStop, setSelectedStop] = useState<{ stop: KmlStop; index: number } | null>(null);
   const [userLocation, setUserLocation] = useState<google.maps.LatLngLiteral | null>(null);
+  const [animatedPositions, setAnimatedPositions] = useState<Map<string, AnimatedPosition>>(new Map());
   const mapRef = useRef<google.maps.Map | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const lastPositionsRef = useRef<Map<string, google.maps.LatLngLiteral>>(new Map());
 
   // Get user's device location on mount
   useEffect(() => {
@@ -120,8 +130,80 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
       return Array.from(latestByUnit.values());
     },
     enabled: unitIds.length > 0,
-    refetchInterval: 20000, // Actualizar cada 20 segundos
+    refetchInterval: 10000, // Actualizar cada 10 segundos
   });
+
+  // Animate markers when positions change
+  useEffect(() => {
+    if (!positions || positions.length === 0) return;
+
+    // Set up new targets for animation
+    const newAnimatedPositions = new Map<string, AnimatedPosition>();
+    
+    positions.forEach((pos) => {
+      const targetPos = { lat: Number(pos.latitude), lng: Number(pos.longitude) };
+      const lastPos = lastPositionsRef.current.get(pos.unit_id);
+      
+      // If we have a previous position, animate from there
+      const currentPos = lastPos || targetPos;
+      
+      newAnimatedPositions.set(pos.unit_id, {
+        current: currentPos,
+        target: targetPos,
+        plateNumber: pos.units?.plate_number || 'Unidad',
+        unitId: pos.unit_id,
+      });
+      
+      // Update last known position
+      lastPositionsRef.current.set(pos.unit_id, targetPos);
+    });
+
+    setAnimatedPositions(newAnimatedPositions);
+
+    // Start animation
+    const animationDuration = 2000; // 2 seconds for smooth transition
+    const startTime = Date.now();
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / animationDuration, 1);
+      
+      // Easing function for smoother animation
+      const easeProgress = 1 - Math.pow(1 - progress, 3);
+
+      setAnimatedPositions((prev) => {
+        const updated = new Map(prev);
+        updated.forEach((pos, unitId) => {
+          if (progress < 1) {
+            const newLat = pos.current.lat + (pos.target.lat - pos.current.lat) * easeProgress;
+            const newLng = pos.current.lng + (pos.target.lng - pos.current.lng) * easeProgress;
+            updated.set(unitId, {
+              ...pos,
+              current: { lat: newLat, lng: newLng },
+            });
+          } else {
+            updated.set(unitId, {
+              ...pos,
+              current: pos.target,
+            });
+          }
+        });
+        return updated;
+      });
+
+      if (progress < 1) {
+        animationFrameRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [positions]);
 
   const center = useMemo(() => {
     // Priority: route coordinates, then unit positions, then user location, then default
@@ -165,6 +247,11 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
     positions?.forEach(pos => bounds.extend({ lat: Number(pos.latitude), lng: Number(pos.longitude) }));
     map.fitBounds(bounds, 50);
   }, [routeCoordinates, stops, positions]);
+
+  // Convert animated positions map to array for rendering
+  const animatedMarkersArray = useMemo(() => {
+    return Array.from(animatedPositions.values());
+  }, [animatedPositions]);
 
   return (
     <GoogleMap
@@ -251,12 +338,12 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
         </InfoWindow>
       )}
 
-      {/* Unit markers */}
-      {positions?.map((pos) => (
+      {/* Animated unit markers */}
+      {animatedMarkersArray.map((animPos) => (
         <Marker
-          key={pos.id}
-          position={{ lat: Number(pos.latitude), lng: Number(pos.longitude) }}
-          title={pos.units?.plate_number || 'Unidad'}
+          key={animPos.unitId}
+          position={animPos.current}
+          title={animPos.plateNumber}
           icon={{
             url: '/images/bus-icon.png',
             scaledSize: new google.maps.Size(40, 40),
