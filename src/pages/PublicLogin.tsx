@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,42 @@ const PublicLogin = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
   const navigate = useNavigate();
+
+  // Clear any existing admin session on mount to avoid conflicts
+  useEffect(() => {
+    const clearExistingSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // Check if current user is an admin
+        const { data: adminUser } = await supabase
+          .from('administrators')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        
+        // If logged in as admin, sign out to allow client login
+        if (adminUser) {
+          await supabase.auth.signOut();
+        } else {
+          // Already logged in as client user, redirect to app
+          const { data: clientUser } = await supabase
+            .from('client_users')
+            .select('id, is_active')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+          
+          if (clientUser?.is_active) {
+            navigate('/app');
+            return;
+          }
+        }
+      }
+      setInitializing(false);
+    };
+    clearExistingSession();
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,6 +148,17 @@ const PublicLogin = () => {
       setLoading(false);
     }
   };
+
+  if (initializing) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3">
+          <img src={tebsaLogo} alt="TEBSA" className="w-16 h-16 object-contain animate-pulse" />
+          <p className="text-sm text-muted-foreground">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
