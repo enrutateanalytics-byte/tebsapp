@@ -19,14 +19,8 @@ const DashboardLayout = () => {
   }
 
   if (!isAdmin) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="text-center">
-          <h1 className="text-xl md:text-2xl font-bold mb-2">Acceso Denegado</h1>
-          <p className="text-muted-foreground text-sm md:text-base">No tienes permisos de administrador</p>
-        </div>
-      </div>
-    );
+    // User is logged in but not admin - redirect to public app or login
+    return <Navigate to="/app" replace />;
   }
 
   return (
