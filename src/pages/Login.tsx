@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,14 +14,37 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp, user, loading: authLoading } = useAuth();
+  const [initializing, setInitializing] = useState(true);
+  const { signIn, signUp, user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
+  // Clear any existing session on mount to avoid conflicts with public app
   useEffect(() => {
-    if (!authLoading && user) {
+    const clearExistingSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // Check if current user is a client user (not admin)
+        const { data: clientUser } = await supabase
+          .from('client_users')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        
+        // If logged in as client user, sign out to allow admin login
+        if (clientUser) {
+          await supabase.auth.signOut();
+        }
+      }
+      setInitializing(false);
+    };
+    clearExistingSession();
+  }, []);
+
+  useEffect(() => {
+    if (!authLoading && !initializing && user && isAdmin) {
       navigate('/dashboard', { replace: true });
     }
-  }, [authLoading, user, navigate]);
+  }, [authLoading, initializing, user, isAdmin, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +73,17 @@ const Login = () => {
       navigate('/dashboard');
     }
   };
+
+  if (initializing || authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4">
+        <div className="flex flex-col items-center gap-3">
+          <img src={tebsaLogo} alt="TEBSA" className="w-16 h-16 object-contain animate-pulse" />
+          <p className="text-sm text-muted-foreground">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4">
