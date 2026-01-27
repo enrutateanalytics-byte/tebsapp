@@ -19,8 +19,8 @@ const DashboardLayout = () => {
   }
 
   if (!isAdmin) {
-    // User is logged in but not admin - redirect to public app or login
-    return <Navigate to="/app" replace />;
+    // User is not admin - redirect to admin login
+    return <Navigate to="/login" replace />;
   }
 
   return (
