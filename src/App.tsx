@@ -15,6 +15,7 @@ import DashboardLayout from "./components/layout/DashboardLayout";
 import NotFound from "./pages/NotFound";
 import PublicLogin from "./pages/PublicLogin";
 import PublicApp from "./pages/PublicApp";
+import Privacy from "./pages/Privacy";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
             {/* Public routes for client users */}
             <Route path="/public-login" element={<PublicLogin />} />
             <Route path="/app" element={<PublicApp />} />
+            <Route path="/privacidad" element={<Privacy />} />
             {/* Admin routes */}
             <Route element={<DashboardLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
