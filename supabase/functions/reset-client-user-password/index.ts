@@ -35,13 +35,10 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Check if the caller is an administrator
-    const { data: adminCheck, error: adminError } = await supabaseUser
-      .from('administrators')
-      .select('id')
-      .single();
+    // Check if the caller is an administrator using the RPC function
+    const { data: isAdmin, error: adminError } = await supabaseUser.rpc('is_administrator');
 
-    if (adminError || !adminCheck) {
+    if (adminError || !isAdmin) {
       console.error('Admin check failed:', adminError);
       throw new Error('Solo los administradores pueden restablecer contraseñas');
     }
