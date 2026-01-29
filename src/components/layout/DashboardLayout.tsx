@@ -4,7 +4,7 @@ import Sidebar, { MobileSidebar } from './Sidebar';
 import { Loader2 } from 'lucide-react';
 
 const DashboardLayout = () => {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, isSupervisor } = useAuth();
 
   if (loading) {
     return (
@@ -18,8 +18,8 @@ const DashboardLayout = () => {
     return <Navigate to="/login" replace />;
   }
 
-  if (!isAdmin) {
-    // User is not admin - redirect to admin login
+  // Allow access for both admins and supervisors
+  if (!isAdmin && !isSupervisor) {
     return <Navigate to="/login" replace />;
   }
 

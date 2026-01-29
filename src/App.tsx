@@ -11,6 +11,7 @@ import RoutesPage from "./pages/Routes";
 import Units from "./pages/Units";
 import Assignments from "./pages/Assignments";
 import Tracking from "./pages/Tracking";
+import Supervisors from "./pages/Supervisors";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import NotFound from "./pages/NotFound";
 import PublicLogin from "./pages/PublicLogin";
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/units" element={<Units />} />
               <Route path="/assignments" element={<Assignments />} />
               <Route path="/tracking" element={<Tracking />} />
+              <Route path="/supervisors" element={<Supervisors />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
