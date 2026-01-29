@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   Table,
@@ -22,7 +23,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, Trash2, UserCheck, UserX, Eye, EyeOff, User, AtSign } from 'lucide-react';
+import { Plus, Trash2, UserCheck, UserX, Eye, EyeOff, User, AtSign, KeyRound, Copy, Check } from 'lucide-react';
 
 interface ClientUser {
   id: string;
@@ -40,9 +41,18 @@ interface ClientUsersManagerProps {
   clientName: string;
 }
 
+interface ResetPasswordResult {
+  username: string;
+  name: string;
+  password: string;
+}
+
 const ClientUsersManager = ({ clientId, clientName }: ClientUsersManagerProps) => {
   const [open, setOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [resetPasswordDialog, setResetPasswordDialog] = useState(false);
+  const [resetResult, setResetResult] = useState<ResetPasswordResult | null>(null);
+  const [copied, setCopied] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     username: '',
@@ -115,6 +125,43 @@ const ClientUsersManager = ({ clientId, clientName }: ClientUsersManagerProps) =
     onError: (error: Error) => toast.error('Error: ' + error.message),
   });
 
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data, error } = await supabase.functions.invoke('reset-client-user-password', {
+        body: { user_id: userId },
+      });
+      
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data as ResetPasswordResult;
+    },
+    onSuccess: (data) => {
+      setResetResult(data);
+      setResetPasswordDialog(true);
+      toast.success('Contraseña restablecida correctamente');
+    },
+    onError: (error: Error) => toast.error('Error: ' + error.message),
+  });
+
+  const handleCopyPassword = async () => {
+    if (resetResult?.password) {
+      await navigator.clipboard.writeText(resetResult.password);
+      setCopied(true);
+      toast.success('Contraseña copiada al portapapeles');
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleCopyCredentials = async () => {
+    if (resetResult) {
+      const text = `Usuario: ${resetResult.username}\nContraseña: ${resetResult.password}`;
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success('Credenciales copiadas al portapapeles');
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.username || !formData.password) {
@@ -153,6 +200,20 @@ const ClientUsersManager = ({ clientId, clientName }: ClientUsersManagerProps) =
           </div>
           
           <div className="flex gap-1 ml-2 shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => {
+                if (confirm(`¿Restablecer la contraseña de ${user.name}?`)) {
+                  resetPasswordMutation.mutate(user.user_id);
+                }
+              }}
+              title="Restablecer contraseña"
+              disabled={resetPasswordMutation.isPending}
+            >
+              <KeyRound className="w-4 h-4" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -314,6 +375,19 @@ const ClientUsersManager = ({ clientId, clientName }: ClientUsersManagerProps) =
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => {
+                            if (confirm(`¿Restablecer la contraseña de ${user.name}?`)) {
+                              resetPasswordMutation.mutate(user.user_id);
+                            }
+                          }}
+                          title="Restablecer contraseña"
+                          disabled={resetPasswordMutation.isPending}
+                        >
+                          <KeyRound className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => toggleActiveMutation.mutate({ 
                             id: user.id, 
                             is_active: !user.is_active 
@@ -346,6 +420,58 @@ const ClientUsersManager = ({ clientId, clientName }: ClientUsersManagerProps) =
           </div>
         </>
       )}
+
+      {/* Reset Password Result Dialog */}
+      <Dialog open={resetPasswordDialog} onOpenChange={(open) => {
+        setResetPasswordDialog(open);
+        if (!open) {
+          setResetResult(null);
+          setCopied(false);
+        }
+      }}>
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Contraseña Restablecida</DialogTitle>
+            <DialogDescription>
+              La nueva contraseña para {resetResult?.name} ha sido generada. Cópiala antes de cerrar.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Usuario</Label>
+              <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+                <AtSign className="w-4 h-4 text-muted-foreground" />
+                <span className="font-mono">{resetResult?.username}</span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Nueva Contraseña</Label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 p-3 bg-muted rounded-md font-mono text-sm break-all">
+                  {resetResult?.password}
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleCopyPassword}
+                  title="Copiar contraseña"
+                >
+                  {copied ? <Check className="w-4 h-4 text-primary" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button onClick={handleCopyCredentials} variant="secondary" className="w-full">
+                <Copy className="w-4 h-4 mr-2" />
+                Copiar Usuario y Contraseña
+              </Button>
+              <Button onClick={() => setResetPasswordDialog(false)} className="w-full">
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
