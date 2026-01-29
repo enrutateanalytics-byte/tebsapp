@@ -9,6 +9,7 @@ import {
   MapPin,
   LogOut,
   Menu,
+  Users,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -16,17 +17,25 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useState } from 'react';
 import tebsaLogo from '@/assets/tebsa-logo.png';
 
-const menuItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: Building2, label: 'Clientes', path: '/clients' },
-  { icon: Route, label: 'Rutas', path: '/routes' },
-  { icon: Bus, label: 'Unidades', path: '/units' },
-  { icon: CalendarClock, label: 'Asignaciones', path: '/assignments' },
-  { icon: MapPin, label: 'Rastreo GPS', path: '/tracking' },
-];
-
 const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
-  const { signOut, user } = useAuth();
+  const { signOut, user, isAdmin, isSupervisor } = useAuth();
+
+  // Menu items - Supervisors page only visible to admins
+  const menuItems = [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+    { icon: Building2, label: 'Clientes', path: '/clients' },
+    { icon: Route, label: 'Rutas', path: '/routes' },
+    { icon: Bus, label: 'Unidades', path: '/units' },
+    { icon: CalendarClock, label: 'Asignaciones', path: '/assignments' },
+    { icon: MapPin, label: 'Rastreo GPS', path: '/tracking' },
+    ...(isAdmin ? [{ icon: Users, label: 'Supervisores', path: '/supervisors' }] : []),
+  ];
+
+  const getRoleLabel = () => {
+    if (isAdmin) return 'Administrador';
+    if (isSupervisor) return 'Supervisor';
+    return 'Usuario';
+  };
 
   return (
     <>
@@ -68,7 +77,7 @@ const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{user?.email}</p>
-            <p className="text-xs text-muted-foreground">Administrador</p>
+            <p className="text-xs text-muted-foreground">{getRoleLabel()}</p>
           </div>
         </div>
         <Button 

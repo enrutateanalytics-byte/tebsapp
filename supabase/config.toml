@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.reset-client-user-password]
 verify_jwt = false
+
+[functions.create-supervisor]
+verify_jwt = false

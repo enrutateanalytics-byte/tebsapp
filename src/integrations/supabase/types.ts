@@ -321,6 +321,69 @@ export type Database = {
           },
         ]
       }
+      supervisor_clients: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          supervisor_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          supervisor_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          supervisor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supervisor_clients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supervisor_clients_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "supervisors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supervisors: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          is_active: boolean
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          is_active?: boolean
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       units: {
         Row: {
           brand: string | null
@@ -375,9 +438,12 @@ export type Database = {
     }
     Functions: {
       generate_access_code: { Args: never; Returns: string }
+      get_supervisor_client_ids: { Args: never; Returns: string[] }
       get_user_client_id: { Args: never; Returns: string }
       is_administrator: { Args: never; Returns: boolean }
       is_client_user: { Args: never; Returns: boolean }
+      is_supervisor: { Args: never; Returns: boolean }
+      is_supervisor_or_admin: { Args: never; Returns: boolean }
       register_first_admin: {
         Args: { p_email: string; p_user_id: string }
         Returns: boolean

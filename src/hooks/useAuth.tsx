@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   isAdmin: boolean;
+  isSupervisor: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -18,6 +19,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSupervisor, setIsSupervisor] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const checkAdminStatus = async (userId: string) => {
@@ -28,6 +30,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       .maybeSingle();
     
     setIsAdmin(!!data);
+  };
+
+  const checkSupervisorStatus = async (userId: string) => {
+    const { data } = await supabase
+      .from('supervisors')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+    
+    setIsSupervisor(!!data);
+  };
+
+  const checkUserRoles = async (userId: string) => {
+    // Check both roles in parallel
+    await Promise.all([
+      checkAdminStatus(userId),
+      checkSupervisorStatus(userId)
+    ]);
   };
 
   useEffect(() => {
@@ -41,10 +62,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (session?.user) {
         setTimeout(() => {
-          checkAdminStatus(session.user.id);
+          checkUserRoles(session.user.id);
         }, 0);
       } else {
         setIsAdmin(false);
+        setIsSupervisor(false);
       }
     });
 
@@ -56,10 +78,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (session?.user) {
         setTimeout(() => {
-          checkAdminStatus(session.user.id);
+          checkUserRoles(session.user.id);
         }, 0);
       } else {
         setIsAdmin(false);
+        setIsSupervisor(false);
       }
     });
 
@@ -96,7 +119,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, isAdmin, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, isAdmin, isSupervisor, loading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
