@@ -6,18 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-// Generate a random password
-function generatePassword(length = 12): string {
-  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%';
-  let password = '';
-  const array = new Uint8Array(length);
-  crypto.getRandomValues(array);
-  for (let i = 0; i < length; i++) {
-    password += charset[array[i] % charset.length];
-  }
-  return password;
-}
-
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -59,10 +47,18 @@ serve(async (req) => {
     }
 
     // Get the request body
-    const { user_id } = await req.json();
+    const { user_id, new_password } = await req.json();
 
     if (!user_id) {
       throw new Error('Se requiere user_id');
+    }
+
+    if (!new_password) {
+      throw new Error('Se requiere la nueva contraseña');
+    }
+
+    if (new_password.length < 6) {
+      throw new Error('La contraseña debe tener al menos 6 caracteres');
     }
 
     // Verify the user exists in client_users
@@ -77,13 +73,10 @@ serve(async (req) => {
       throw new Error('Usuario de cliente no encontrado');
     }
 
-    // Generate new password
-    const newPassword = generatePassword(12);
-
     // Update the user's password
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
       user_id,
-      { password: newPassword }
+      { password: new_password }
     );
 
     if (updateError) {
@@ -96,7 +89,6 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        password: newPassword,
         username: clientUser.username,
         name: clientUser.name,
       }),
