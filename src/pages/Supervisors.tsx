@@ -22,7 +22,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Users, Building2, Loader2, UserCheck, UserX } from 'lucide-react';
+import { Plus, Users, Building2, Loader2, UserCheck, UserX, KeyRound } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate } from 'react-router-dom';
@@ -57,6 +57,10 @@ const Supervisors = () => {
   const [newSupervisor, setNewSupervisor] = useState({ email: '', password: '', name: '' });
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [passwordSupervisor, setPasswordSupervisor] = useState<Supervisor | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   // Only admins can access this page
   if (!isAdmin) {
@@ -226,6 +230,53 @@ const Supervisors = () => {
         description: error.message,
         variant: 'destructive',
       });
+    }
+  };
+
+  // Open password reset dialog
+  const openPasswordDialog = (supervisor: Supervisor) => {
+    setPasswordSupervisor(supervisor);
+    setNewPassword('');
+    setIsPasswordDialogOpen(true);
+  };
+
+  // Reset supervisor password
+  const resetPassword = async () => {
+    if (!passwordSupervisor || !newPassword) return;
+    
+    setIsResettingPassword(true);
+    try {
+      const response = await supabase.functions.invoke('reset-supervisor-password', {
+        body: {
+          user_id: passwordSupervisor.user_id,
+          new_password: newPassword,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+
+      toast({
+        title: 'Contraseña actualizada',
+        description: `La contraseña de ${passwordSupervisor.name} ha sido actualizada.`,
+      });
+
+      setIsPasswordDialogOpen(false);
+      setNewPassword('');
+      setPasswordSupervisor(null);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'No se pudo actualizar la contraseña',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -407,6 +458,14 @@ const Supervisors = () => {
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => openPasswordDialog(supervisor)}
+                      >
+                        <KeyRound className="w-4 h-4 mr-1" />
+                        Contraseña
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => openAssignDialog(supervisor)}
                       >
                         <Building2 className="w-4 h-4 mr-1" />
@@ -472,6 +531,50 @@ const Supervisors = () => {
                 Cancelar
               </Button>
               <Button onClick={saveAssignments}>Guardar Asignaciones</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Cambiar Contraseña de {passwordSupervisor?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Ingresa la nueva contraseña para el supervisor <strong>{passwordSupervisor?.email}</strong>
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Nueva Contraseña</Label>
+              <Input
+                id="new-password"
+                type="password"
+                placeholder="Mínimo 6 caracteres"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="outline" onClick={() => setIsPasswordDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={resetPassword}
+                disabled={isResettingPassword || newPassword.length < 6}
+              >
+                {isResettingPassword ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Actualizando...
+                  </>
+                ) : (
+                  'Actualizar Contraseña'
+                )}
+              </Button>
             </div>
           </div>
         </DialogContent>
