@@ -15,7 +15,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
-  const { signIn, signUp, user, isAdmin, loading: authLoading } = useAuth();
+  const { signIn, signUp, user, isAdmin, isSupervisor, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   // Clear any existing session on mount to avoid conflicts with public app
@@ -41,10 +41,10 @@ const Login = () => {
   }, []);
 
   useEffect(() => {
-    if (!authLoading && !initializing && user && isAdmin) {
+    if (!authLoading && !initializing && user && (isAdmin || isSupervisor)) {
       navigate('/dashboard', { replace: true });
     }
-  }, [authLoading, initializing, user, isAdmin, navigate]);
+  }, [authLoading, initializing, user, isAdmin, isSupervisor, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
