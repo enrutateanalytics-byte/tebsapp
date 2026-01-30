@@ -83,7 +83,10 @@ const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
         <Button 
           variant="ghost" 
           className="w-full justify-start text-muted-foreground"
-          onClick={signOut}
+          onClick={async () => {
+            await signOut();
+            window.location.href = '/login';
+          }}
         >
           <LogOut className="w-4 h-4 mr-3" />
           Cerrar Sesión
