@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.create-supervisor]
 verify_jwt = false
+
+[functions.reset-supervisor-password]
+verify_jwt = false
