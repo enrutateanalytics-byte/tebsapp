@@ -21,21 +21,26 @@ const Login = () => {
   // Clear any existing session on mount to avoid conflicts with public app
   useEffect(() => {
     const clearExistingSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        // Check if current user is a client user (not admin)
-        const { data: clientUser } = await supabase
-          .from('client_users')
-          .select('id')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
-        
-        // If logged in as client user, sign out to allow admin login
-        if (clientUser) {
-          await supabase.auth.signOut();
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          // Check if current user is a client user (not admin)
+          const { data: clientUser } = await supabase
+            .from('client_users')
+            .select('id')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+          
+          // If logged in as client user, sign out to allow admin login
+          if (clientUser) {
+            await supabase.auth.signOut();
+          }
         }
+      } catch (error) {
+        console.error('Error clearing session:', error);
+      } finally {
+        setInitializing(false);
       }
-      setInitializing(false);
     };
     clearExistingSession();
   }, []);
