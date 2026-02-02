@@ -35,7 +35,6 @@ interface Assignment {
 interface Driver {
   id: string;
   name: string;
-  unit_id: string | null;
 }
 
 const DriverApp = () => {
@@ -61,7 +60,7 @@ const DriverApp = () => {
       // Get driver info
       const { data: driverData, error: driverError } = await supabase
         .from('drivers')
-        .select('id, name, unit_id')
+        .select('id, name')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .maybeSingle();
@@ -73,7 +72,7 @@ const DriverApp = () => {
       }
 
       setDriver(driverData);
-      await fetchAssignments(driverData.unit_id);
+      await fetchAssignments(driverData.id);
     } catch (error) {
       console.error('Auth check error:', error);
       navigate('/driver-login');
@@ -82,8 +81,8 @@ const DriverApp = () => {
     }
   };
 
-  const fetchAssignments = async (unitId: string | null) => {
-    if (!unitId) {
+  const fetchAssignments = async (driverId: string | null) => {
+    if (!driverId) {
       setAssignments([]);
       return;
     }
@@ -115,7 +114,7 @@ const DriverApp = () => {
           plate_number
         )
       `)
-      .eq('unit_id', unitId)
+      .eq('driver_id', driverId)
       .eq('assignment_date', today)
       .order('start_time', { ascending: true });
 
@@ -203,22 +202,13 @@ const DriverApp = () => {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => fetchAssignments(driver?.unit_id || null)}
+            onClick={() => fetchAssignments(driver?.id || null)}
           >
             Actualizar
           </Button>
         </div>
 
-        {!driver?.unit_id ? (
-          <Card>
-            <CardContent className="p-6 text-center">
-              <AlertCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
-                No tienes una unidad asignada. Contacta al administrador.
-              </p>
-            </CardContent>
-          </Card>
-        ) : assignments.length === 0 ? (
+        {assignments.length === 0 ? (
           <Card>
             <CardContent className="p-6 text-center">
               <MapPin className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
