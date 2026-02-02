@@ -206,8 +206,8 @@ const PublicApp = () => {
           </Select>
         </div>
 
-        {/* Floating QR Button */}
-        <div className="absolute top-4 right-4 z-40 animate-fade-in">
+        {/* Floating QR Button - Bottom Right */}
+        <div className="absolute bottom-6 right-4 z-40 animate-fade-in">
           <PassengerQRGenerator clientId={clientUser.client_id} userName={clientUser.name} />
         </div>
         {/* Route Info Card - Shows when route is selected */}
