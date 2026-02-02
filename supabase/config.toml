@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.reset-supervisor-password]
 verify_jwt = false
+
+[functions.create-driver]
+verify_jwt = false
+
+[functions.reset-driver-password]
+verify_jwt = false

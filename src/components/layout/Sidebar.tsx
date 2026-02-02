@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu,
   Users,
+  UserCog,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ import tebsaLogo from '@/assets/tebsa-logo.png';
 const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
   const { signOut, user, isAdmin, isSupervisor } = useAuth();
 
-  // Menu items - Supervisors page only visible to admins
+  // Menu items - Supervisors and Drivers pages only visible to admins
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
     { icon: Building2, label: 'Clientes', path: '/clients' },
@@ -28,7 +29,10 @@ const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => {
     { icon: Bus, label: 'Unidades', path: '/units' },
     { icon: CalendarClock, label: 'Asignaciones', path: '/assignments' },
     { icon: MapPin, label: 'Rastreo GPS', path: '/tracking' },
-    ...(isAdmin ? [{ icon: Users, label: 'Supervisores', path: '/supervisors' }] : []),
+    ...(isAdmin ? [
+      { icon: Users, label: 'Supervisores', path: '/supervisors' },
+      { icon: UserCog, label: 'Conductores', path: '/drivers' },
+    ] : []),
   ];
 
   const getRoleLabel = () => {

@@ -82,47 +82,73 @@ export type Database = {
       }
       assignments: {
         Row: {
+          actual_end_time: string | null
+          actual_start_time: string | null
           assignment_date: string
           created_at: string
+          driver_id: string | null
           end_time: string | null
           id: string
           notes: string | null
           route_id: string
           start_time: string | null
+          started_by_driver_id: string | null
           status: string
           unit_id: string
           updated_at: string
         }
         Insert: {
+          actual_end_time?: string | null
+          actual_start_time?: string | null
           assignment_date?: string
           created_at?: string
+          driver_id?: string | null
           end_time?: string | null
           id?: string
           notes?: string | null
           route_id: string
           start_time?: string | null
+          started_by_driver_id?: string | null
           status?: string
           unit_id: string
           updated_at?: string
         }
         Update: {
+          actual_end_time?: string | null
+          actual_start_time?: string | null
           assignment_date?: string
           created_at?: string
+          driver_id?: string | null
           end_time?: string | null
           id?: string
           notes?: string | null
           route_id?: string
           start_time?: string | null
+          started_by_driver_id?: string | null
           status?: string
           unit_id?: string
           updated_at?: string
         }
         Relationships: [
           {
+            foreignKeyName: "assignments_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "assignments_route_id_fkey"
             columns: ["route_id"]
             isOneToOne: false
             referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_started_by_driver_id_fkey"
+            columns: ["started_by_driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
             referencedColumns: ["id"]
           },
           {
@@ -217,6 +243,53 @@ export type Database = {
         }
         Relationships: []
       }
+      drivers: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          is_active: boolean | null
+          name: string
+          phone: string | null
+          unit_id: string | null
+          updated_at: string | null
+          user_id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          phone?: string | null
+          unit_id?: string | null
+          updated_at?: string | null
+          user_id: string
+          username: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          phone?: string | null
+          unit_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drivers_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gps_positions: {
         Row: {
           assignment_id: string | null
@@ -261,6 +334,115 @@ export type Database = {
             columns: ["unit_id"]
             isOneToOne: false
             referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      passenger_boardings: {
+        Row: {
+          assignment_id: string
+          boarded_at: string
+          driver_id: string | null
+          id: string
+          is_valid: boolean | null
+          passenger_qr_id: string | null
+          qr_code_scanned: string
+          route_id: string | null
+          validation_message: string | null
+        }
+        Insert: {
+          assignment_id: string
+          boarded_at?: string
+          driver_id?: string | null
+          id?: string
+          is_valid?: boolean | null
+          passenger_qr_id?: string | null
+          qr_code_scanned: string
+          route_id?: string | null
+          validation_message?: string | null
+        }
+        Update: {
+          assignment_id?: string
+          boarded_at?: string
+          driver_id?: string | null
+          id?: string
+          is_valid?: boolean | null
+          passenger_qr_id?: string | null
+          qr_code_scanned?: string
+          route_id?: string | null
+          validation_message?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "passenger_boardings_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "passenger_boardings_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "passenger_boardings_passenger_qr_id_fkey"
+            columns: ["passenger_qr_id"]
+            isOneToOne: false
+            referencedRelation: "passenger_qr_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "passenger_boardings_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      passenger_qr_codes: {
+        Row: {
+          allowed_route_ids: string[] | null
+          client_id: string
+          created_at: string | null
+          employee_id: string | null
+          employee_name: string
+          id: string
+          is_active: boolean | null
+          qr_code: string
+          updated_at: string | null
+        }
+        Insert: {
+          allowed_route_ids?: string[] | null
+          client_id: string
+          created_at?: string | null
+          employee_id?: string | null
+          employee_name: string
+          id?: string
+          is_active?: boolean | null
+          qr_code?: string
+          updated_at?: string | null
+        }
+        Update: {
+          allowed_route_ids?: string[] | null
+          client_id?: string
+          created_at?: string | null
+          employee_id?: string | null
+          employee_name?: string
+          id?: string
+          is_active?: boolean | null
+          qr_code?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "passenger_qr_codes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
@@ -438,10 +620,13 @@ export type Database = {
     }
     Functions: {
       generate_access_code: { Args: never; Returns: string }
+      get_driver_id: { Args: never; Returns: string }
+      get_driver_unit_id: { Args: never; Returns: string }
       get_supervisor_client_ids: { Args: never; Returns: string[] }
       get_user_client_id: { Args: never; Returns: string }
       is_administrator: { Args: never; Returns: boolean }
       is_client_user: { Args: never; Returns: boolean }
+      is_driver: { Args: never; Returns: boolean }
       is_supervisor: { Args: never; Returns: boolean }
       is_supervisor_or_admin: { Args: never; Returns: boolean }
       register_first_admin: {
