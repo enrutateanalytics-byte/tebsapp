@@ -487,14 +487,14 @@ const Drivers = () => {
             <div className="space-y-2">
               <Label htmlFor="unit">Unidad asignada</Label>
               <Select
-                value={formData.unit_id}
-                onValueChange={(value) => setFormData({ ...formData, unit_id: value })}
+                value={formData.unit_id || '__none__'}
+                onValueChange={(value) => setFormData({ ...formData, unit_id: value === '__none__' ? '' : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona una unidad" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sin asignar</SelectItem>
+                  <SelectItem value="__none__">Sin asignar</SelectItem>
                   {units.map((unit) => (
                     <SelectItem key={unit.id} value={unit.id}>
                       {unit.plate_number} {unit.brand && unit.model ? `- ${unit.brand} ${unit.model}` : ''}
