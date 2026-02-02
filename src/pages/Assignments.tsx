@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/dialog';
 
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, CalendarClock, Search, Sun, Sunset, Moon, Bus, Route } from 'lucide-react';
+import { Plus, Pencil, Trash2, CalendarClock, Search, Sun, Sunset, Moon, Bus, Route, UserCog } from 'lucide-react';
 
 const SHIFTS = [
   { id: 'morning', name: 'Mañana', start: '06:00', end: '14:00', icon: Sun },
@@ -58,12 +58,14 @@ interface Assignment {
   id: string;
   route_id: string;
   unit_id: string;
+  driver_id: string | null;
   assignment_date: string;
   start_time: string | null;
   end_time: string | null;
   notes: string | null;
   routes?: { name: string } | null;
   units?: { plate_number: string; driver_name: string | null } | null;
+  drivers?: { name: string } | null;
 }
 
 interface RouteOption {
@@ -77,6 +79,12 @@ interface UnitOption {
   driver_name: string | null;
 }
 
+interface DriverOption {
+  id: string;
+  name: string;
+  username: string;
+}
+
 const Assignments = () => {
   const [open, setOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
@@ -84,6 +92,7 @@ const Assignments = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRouteId, setSelectedRouteId] = useState<string>('');
   const [selectedUnitId, setSelectedUnitId] = useState<string>('');
+  const [selectedDriverId, setSelectedDriverId] = useState<string>('');
   const queryClient = useQueryClient();
 
   const { data: assignments, isLoading } = useQuery({
@@ -91,10 +100,10 @@ const Assignments = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('assignments')
-        .select('*, routes(name), units(plate_number, driver_name)')
+        .select('*, routes(name), units(plate_number, driver_name), drivers!assignments_driver_id_fkey(name)')
         .order('assignment_date', { ascending: false });
       if (error) throw error;
-      return data as Assignment[];
+      return data as unknown as Assignment[];
     },
   });
 
@@ -124,8 +133,21 @@ const Assignments = () => {
     },
   });
 
+  const { data: drivers } = useQuery({
+    queryKey: ['drivers-options'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('drivers')
+        .select('id, name, username')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data as DriverOption[];
+    },
+  });
+
   const createMutation = useMutation({
-    mutationFn: async (assignment: Omit<Assignment, 'id' | 'routes' | 'units'>) => {
+    mutationFn: async (assignment: Omit<Assignment, 'id' | 'routes' | 'units' | 'drivers'>) => {
       const { error } = await supabase.from('assignments').insert(assignment);
       if (error) throw error;
     },
@@ -138,7 +160,7 @@ const Assignments = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (assignment: Omit<Assignment, 'routes' | 'units'>) => {
+    mutationFn: async (assignment: Omit<Assignment, 'routes' | 'units' | 'drivers'>) => {
       const { error } = await supabase
         .from('assignments')
         .update(assignment)
@@ -180,6 +202,7 @@ const Assignments = () => {
     const assignment = {
       route_id: selectedRouteId,
       unit_id: selectedUnitId,
+      driver_id: selectedDriverId || null,
       assignment_date: new Date().toISOString().split('T')[0],
       start_time: shift?.start || null,
       end_time: shift?.end || null,
@@ -200,6 +223,7 @@ const Assignments = () => {
       setSelectedShift('full');
       setSelectedRouteId('');
       setSelectedUnitId('');
+      setSelectedDriverId('');
     }
   };
 
@@ -208,6 +232,7 @@ const Assignments = () => {
     setSelectedShift(getShiftFromTimes(assignment.start_time, assignment.end_time));
     setSelectedRouteId(assignment.route_id);
     setSelectedUnitId(assignment.unit_id);
+    setSelectedDriverId(assignment.driver_id || '');
     setOpen(true);
   };
 
@@ -252,16 +277,19 @@ const Assignments = () => {
               </div>
               
               {/* Unit */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mb-1">
                 <Bus className="w-4 h-4 text-muted-foreground shrink-0" />
-                <div className="truncate">
-                  <span>{assignment.units?.plate_number}</span>
-                  {assignment.units?.driver_name && (
-                    <span className="text-muted-foreground text-sm ml-1">
-                      • {assignment.units.driver_name}
-                    </span>
+                <span className="truncate">{assignment.units?.plate_number}</span>
+              </div>
+              
+              {/* Driver */}
+              <div className="flex items-center gap-2">
+                <UserCog className="w-4 h-4 text-muted-foreground shrink-0" />
+                <span className="truncate text-sm">
+                  {assignment.drivers?.name || (
+                    <span className="text-muted-foreground">Sin conductor</span>
                   )}
-                </div>
+                </span>
               </div>
             </div>
             
@@ -342,6 +370,20 @@ const Assignments = () => {
                   placeholder="Seleccionar unidad"
                   searchPlaceholder="Buscar unidad..."
                   emptyMessage="No se encontraron unidades."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Conductor</Label>
+                <SearchableSelect
+                  options={drivers?.map((driver) => ({
+                    value: driver.id,
+                    label: `${driver.name} (${driver.username})`,
+                  })) || []}
+                  value={selectedDriverId}
+                  onValueChange={setSelectedDriverId}
+                  placeholder="Seleccionar conductor (opcional)"
+                  searchPlaceholder="Buscar conductor..."
+                  emptyMessage="No hay conductores registrados."
                 />
               </div>
               <div className="space-y-3">
@@ -436,7 +478,8 @@ const Assignments = () => {
                 <TableRow>
                   <TableHead>Turno</TableHead>
                   <TableHead>Ruta</TableHead>
-                  <TableHead>Unidad / Conductor</TableHead>
+                  <TableHead>Unidad</TableHead>
+                  <TableHead>Conductor</TableHead>
                   <TableHead className="w-24">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -452,12 +495,10 @@ const Assignments = () => {
                       )}
                     </TableCell>
                     <TableCell>{assignment.routes?.name || '-'}</TableCell>
+                    <TableCell>{assignment.units?.plate_number || '-'}</TableCell>
                     <TableCell>
-                      {assignment.units?.plate_number}
-                      {assignment.units?.driver_name && (
-                        <span className="text-muted-foreground text-sm block">
-                          {assignment.units.driver_name}
-                        </span>
+                      {assignment.drivers?.name || (
+                        <span className="text-muted-foreground">Sin asignar</span>
                       )}
                     </TableCell>
                     <TableCell>
