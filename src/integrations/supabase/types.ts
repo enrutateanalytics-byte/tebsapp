@@ -619,8 +619,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      driver_can_access_assignment: {
+        Args: { assignment_unit_id: string }
+        Returns: boolean
+      }
       generate_access_code: { Args: never; Returns: string }
       get_driver_id: { Args: never; Returns: string }
+      get_driver_route_ids: { Args: never; Returns: string[] }
       get_driver_unit_id: { Args: never; Returns: string }
       get_supervisor_client_ids: { Args: never; Returns: string[] }
       get_user_client_id: { Args: never; Returns: string }
