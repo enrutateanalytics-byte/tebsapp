@@ -25,6 +25,7 @@ interface Driver {
     id: string;
     plate_number: string;
   } | null;
+  assigned_units?: string[];
 }
 
 interface Unit {
@@ -65,7 +66,8 @@ const Drivers = () => {
   }, [isAdmin]);
 
   const fetchDrivers = async () => {
-    const { data, error } = await supabase
+    // Fetch drivers with their directly assigned unit
+    const { data: driversData, error: driversError } = await supabase
       .from('drivers')
       .select(`
         *,
@@ -76,16 +78,44 @@ const Drivers = () => {
       `)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching drivers:', error);
+    if (driversError) {
+      console.error('Error fetching drivers:', driversError);
       toast({
         title: 'Error',
         description: 'No se pudieron cargar los conductores',
         variant: 'destructive',
       });
-    } else {
-      setDrivers(data || []);
+      setLoading(false);
+      return;
     }
+
+    // Fetch assignments to get units assigned via assignments table
+    const { data: assignmentsData } = await supabase
+      .from('assignments')
+      .select(`
+        driver_id,
+        units (plate_number)
+      `)
+      .not('driver_id', 'is', null);
+
+    // Create a map of driver_id to assigned unit plate numbers
+    const driverAssignments: Record<string, Set<string>> = {};
+    assignmentsData?.forEach((assignment: any) => {
+      if (assignment.driver_id && assignment.units?.plate_number) {
+        if (!driverAssignments[assignment.driver_id]) {
+          driverAssignments[assignment.driver_id] = new Set();
+        }
+        driverAssignments[assignment.driver_id].add(assignment.units.plate_number);
+      }
+    });
+
+    // Merge the data
+    const driversWithAssignments = (driversData || []).map(driver => ({
+      ...driver,
+      assigned_units: Array.from(driverAssignments[driver.id] || []),
+    }));
+
+    setDrivers(driversWithAssignments);
     setLoading(false);
   };
 
@@ -361,7 +391,8 @@ const Drivers = () => {
                   <TableHead>Nombre</TableHead>
                   <TableHead>Usuario</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Unidad</TableHead>
+                  <TableHead>Unidad Directa</TableHead>
+                  <TableHead>Unidades Asignadas</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -374,7 +405,20 @@ const Drivers = () => {
                     <TableCell>{driver.email}</TableCell>
                     <TableCell>
                       {driver.unit?.plate_number || (
-                        <span className="text-muted-foreground">Sin asignar</span>
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {driver.assigned_units && driver.assigned_units.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {driver.assigned_units.map((plate, idx) => (
+                            <Badge key={idx} variant="outline" className="text-xs">
+                              {plate}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
                     <TableCell>
