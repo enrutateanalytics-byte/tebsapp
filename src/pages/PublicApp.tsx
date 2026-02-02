@@ -8,6 +8,7 @@ import { LogOut, MapPin, Navigation } from 'lucide-react';
 import tebsaLogo from '@/assets/tebsa-logo.png';
 import GoogleMapsProvider from '@/components/maps/GoogleMapsProvider';
 import PublicCombinedMap from '@/components/public/PublicCombinedMap';
+import PassengerQRGenerator from '@/components/public/PassengerQRGenerator';
 import type { User, Session } from '@supabase/supabase-js';
 
 interface RouteData {
@@ -205,6 +206,10 @@ const PublicApp = () => {
           </Select>
         </div>
 
+        {/* Floating QR Button */}
+        <div className="absolute top-4 right-4 z-40 animate-fade-in">
+          <PassengerQRGenerator clientId={clientUser.client_id} userName={clientUser.name} />
+        </div>
         {/* Route Info Card - Shows when route is selected */}
         {selectedRoute && (
           <div className="absolute bottom-6 left-4 right-4 z-40 animate-fade-in">

@@ -345,6 +345,9 @@ export type Database = {
           driver_id: string | null
           id: string
           is_valid: boolean | null
+          latitude: number | null
+          location_name: string | null
+          longitude: number | null
           passenger_qr_id: string | null
           qr_code_scanned: string
           route_id: string | null
@@ -356,6 +359,9 @@ export type Database = {
           driver_id?: string | null
           id?: string
           is_valid?: boolean | null
+          latitude?: number | null
+          location_name?: string | null
+          longitude?: number | null
           passenger_qr_id?: string | null
           qr_code_scanned: string
           route_id?: string | null
@@ -367,6 +373,9 @@ export type Database = {
           driver_id?: string | null
           id?: string
           is_valid?: boolean | null
+          latitude?: number | null
+          location_name?: string | null
+          longitude?: number | null
           passenger_qr_id?: string | null
           qr_code_scanned?: string
           route_id?: string | null
