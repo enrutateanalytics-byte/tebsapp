@@ -391,7 +391,6 @@ const Drivers = () => {
                   <TableHead>Nombre</TableHead>
                   <TableHead>Usuario</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Unidad Directa</TableHead>
                   <TableHead>Unidades Asignadas</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
@@ -404,11 +403,6 @@ const Drivers = () => {
                     <TableCell>{driver.username}</TableCell>
                     <TableCell>{driver.email}</TableCell>
                     <TableCell>
-                      {driver.unit?.plate_number || (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
                       {driver.assigned_units && driver.assigned_units.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {driver.assigned_units.map((plate, idx) => (
@@ -418,7 +412,7 @@ const Drivers = () => {
                           ))}
                         </div>
                       ) : (
-                        <span className="text-muted-foreground">-</span>
+                        <span className="text-muted-foreground">Sin asignar</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -527,25 +521,6 @@ const Drivers = () => {
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="555-123-4567"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="unit">Unidad asignada</Label>
-              <Select
-                value={formData.unit_id || '__none__'}
-                onValueChange={(value) => setFormData({ ...formData, unit_id: value === '__none__' ? '' : value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona una unidad" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Sin asignar</SelectItem>
-                  {units.map((unit) => (
-                    <SelectItem key={unit.id} value={unit.id}>
-                      {unit.plate_number} {unit.brand && unit.model ? `- ${unit.brand} ${unit.model}` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
           <DialogFooter>
