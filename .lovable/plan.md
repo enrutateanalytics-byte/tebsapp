@@ -1,197 +1,153 @@
 
-# Plan: Sistema de Supervisores con Acceso Restringido a Clientes
+# Plan: Configurar App Nativa con Capacitor
 
 ## Resumen
 
-Crearemos un nuevo tipo de usuario llamado **"Supervisor"** que tendrá acceso completo a todas las funcionalidades del sistema administrativo (Dashboard, Clientes, Rutas, Unidades, Asignaciones, Rastreo GPS), pero **solo podrá ver y gestionar la información de los clientes que le sean asignados**.
-
-## Estructura de la Solución
-
-```text
-+------------------+     +-------------------+     +---------+
-|   supervisors    |---->| supervisor_clients|<----|  clients|
-+------------------+     +-------------------+     +---------+
-| id               |     | supervisor_id     |     | id      |
-| user_id          |     | client_id         |     | name    |
-| email            |     | created_at        |     | ...     |
-| name             |     +-------------------+     +---------+
-| is_active        |
-| created_at       |
-+------------------+
-```
-
-## Cambios de Base de Datos
-
-### 1. Nueva tabla: `supervisors`
-Almacenará los usuarios supervisores (similar a `administrators`)
-
-| Columna | Tipo | Descripción |
-|---------|------|-------------|
-| id | uuid | Identificador único |
-| user_id | uuid | Referencia al usuario en auth.users |
-| email | text | Correo electrónico del supervisor |
-| name | text | Nombre del supervisor |
-| is_active | boolean | Si está activo |
-| created_at | timestamp | Fecha de creación |
-
-### 2. Nueva tabla: `supervisor_clients`
-Tabla de relación muchos-a-muchos entre supervisores y clientes
-
-| Columna | Tipo | Descripción |
-|---------|------|-------------|
-| id | uuid | Identificador único |
-| supervisor_id | uuid | Referencia al supervisor |
-| client_id | uuid | Referencia al cliente |
-| created_at | timestamp | Fecha de asignación |
-
-### 3. Nuevas funciones de base de datos
-- `is_supervisor()`: Verificar si el usuario actual es supervisor
-- `get_supervisor_client_ids()`: Obtener lista de client_ids asignados al supervisor
-- `is_supervisor_or_admin()`: Verificar si es supervisor o administrador
-
-### 4. Políticas RLS actualizadas
-Modificar las políticas existentes en todas las tablas para permitir acceso a supervisores con restricción por cliente:
-- **clients**: Supervisores solo ven clientes asignados
-- **routes**: Supervisores solo ven rutas de sus clientes
-- **assignments**: Supervisores solo ven asignaciones de rutas de sus clientes
-- **units**: Supervisores ven unidades asignadas a rutas de sus clientes
-- **gps_positions**: Supervisores ven posiciones de unidades de sus clientes
-
-## Cambios en el Frontend
-
-### 1. Hook de autenticación (`useAuth.tsx`)
-- Agregar estado `isSupervisor`
-- Agregar función `checkSupervisorStatus()`
-- Exponer los client_ids asignados al supervisor
-
-### 2. Layout del Dashboard (`DashboardLayout.tsx`)
-- Permitir acceso a supervisores además de administradores
-
-### 3. Sidebar (`Sidebar.tsx`)
-- Mostrar etiqueta "Supervisor" en lugar de "Administrador" según corresponda
-
-### 4. Login (`Login.tsx`)
-- Permitir login de supervisores (misma pantalla de admin)
-
-### 5. Todas las páginas de gestión
-Las páginas automáticamente mostrarán solo datos permitidos gracias a las políticas RLS. No requieren cambios de código, ya que las queries ya usan RLS.
-
-## Nueva Edge Function
-
-### `create-supervisor`
-Función para crear supervisores, similar a `create-admin-user`:
-- Recibe: email, password, name
-- Crea usuario en auth.users
-- Crea registro en tabla `supervisors`
-- Solo administradores pueden ejecutarla
-
-## Gestión de Permisos (UI)
-
-### Nueva sección en panel de administración
-Agregar página/sección para:
-1. Listar supervisores existentes
-2. Crear nuevos supervisores
-3. Asignar/quitar clientes a cada supervisor
-4. Activar/desactivar supervisores
+Vamos a configurar tu proyecto existente para que pueda compilarse como una app nativa para Android e iOS usando Capacitor. Tu app actual ya tiene una vista publica optimizada para moviles (`/app`) que sera perfecta como punto de entrada de la app movil.
 
 ---
 
-## Sección Técnica
+## Que es Capacitor?
 
-### Migración SQL
+Capacitor es una herramienta que permite empaquetar tu aplicacion web como una app nativa. Tu codigo React seguira siendo el mismo, pero podra ejecutarse dentro de una app real que se puede publicar en App Store y Google Play.
 
-```sql
--- Tabla de supervisores
-CREATE TABLE public.supervisors (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL UNIQUE,
-  email text NOT NULL,
-  name text NOT NULL,
-  is_active boolean NOT NULL DEFAULT true,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+---
 
--- Tabla de relación supervisor-clientes
-CREATE TABLE public.supervisor_clients (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  supervisor_id uuid NOT NULL REFERENCES public.supervisors(id) ON DELETE CASCADE,
-  client_id uuid NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE(supervisor_id, client_id)
-);
+## Pasos que Lovable realizara
 
--- Habilitar RLS
-ALTER TABLE public.supervisors ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.supervisor_clients ENABLE ROW LEVEL SECURITY;
+### 1. Instalar dependencias de Capacitor
 
--- Función: verificar si es supervisor
-CREATE OR REPLACE FUNCTION public.is_supervisor()
-RETURNS boolean
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM public.supervisors
-    WHERE user_id = auth.uid() AND is_active = true
-  );
-END;
-$$;
+Se agregaran los siguientes paquetes:
+- `@capacitor/core` - Nucleo de Capacitor
+- `@capacitor/cli` - Herramienta de linea de comandos
+- `@capacitor/ios` - Soporte para iOS
+- `@capacitor/android` - Soporte para Android
 
--- Función: obtener client_ids del supervisor
-CREATE OR REPLACE FUNCTION public.get_supervisor_client_ids()
-RETURNS uuid[]
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  RETURN (
-    SELECT COALESCE(array_agg(sc.client_id), ARRAY[]::uuid[])
-    FROM public.supervisors s
-    JOIN public.supervisor_clients sc ON sc.supervisor_id = s.id
-    WHERE s.user_id = auth.uid() AND s.is_active = true
-  );
-END;
-$$;
+### 2. Crear archivo de configuracion
 
--- Función combinada: es supervisor o administrador
-CREATE OR REPLACE FUNCTION public.is_supervisor_or_admin()
-RETURNS boolean
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  RETURN is_administrator() OR is_supervisor();
-END;
-$$;
+Se creara `capacitor.config.ts` con:
+- **appId**: `app.lovable.9a6495a750ba4666955c20882df3fa9a`
+- **appName**: `tebsapp`
+- **URL del servidor**: Apuntando al preview de Lovable para desarrollo con hot-reload
+
+### 3. Optimizar index.html para moviles
+
+Se agregaran meta tags necesarios para apps nativas:
+- Viewport optimizado para iOS
+- Configuracion de safe areas para notch y barras
+- Prevencion de zoom en inputs
+- Status bar configuration
+
+### 4. Agregar estilos para safe areas
+
+Se actualizara `index.css` con clases CSS para manejar las areas seguras del dispositivo (notch, barra de navegacion, etc.)
+
+---
+
+## Pasos que TU deberas realizar (en tu computadora)
+
+Una vez que Lovable complete los cambios, deberas:
+
+### Requisitos previos
+- **Para iOS**: Mac con Xcode instalado
+- **Para Android**: Android Studio instalado
+
+### Comandos a ejecutar
+
+```bash
+# 1. Exportar el proyecto a GitHub (boton "Export to GitHub" en Lovable)
+
+# 2. Clonar el repositorio
+git clone [tu-repositorio]
+cd [nombre-del-proyecto]
+
+# 3. Instalar dependencias
+npm install
+
+# 4. Agregar plataformas nativas
+npx cap add ios      # Para iOS
+npx cap add android  # Para Android
+
+# 5. Actualizar dependencias nativas
+npx cap update ios
+npx cap update android
+
+# 6. Compilar el proyecto
+npm run build
+
+# 7. Sincronizar con las plataformas nativas
+npx cap sync
+
+# 8. Ejecutar en emulador o dispositivo
+npx cap run ios      # Abre en Xcode/Simulador
+npx cap run android  # Abre en Android Studio/Emulador
 ```
 
-### Políticas RLS para tablas existentes (ejemplos)
+---
 
-```sql
--- clients: supervisores ven solo clientes asignados
-CREATE POLICY "Supervisors can view assigned clients"
-ON public.clients FOR SELECT
-USING (is_supervisor() AND id = ANY(get_supervisor_client_ids()));
+## Flujo de desarrollo con Hot-Reload
 
--- routes: supervisores ven rutas de sus clientes
-CREATE POLICY "Supervisors can view routes of assigned clients"
-ON public.routes FOR SELECT
-USING (is_supervisor() AND client_id = ANY(get_supervisor_client_ids()));
+Durante el desarrollo, la app movil cargara directamente desde el servidor de Lovable:
 
--- Similar para INSERT, UPDATE, DELETE en cada tabla
+```text
++-------------------+          +-------------------+
+|   App en celular  |  <--->   |  Lovable Preview  |
+|  (iOS/Android)    |          |  (tu codigo web)  |
++-------------------+          +-------------------+
 ```
+
+Esto significa que cualquier cambio que hagas en Lovable se reflejara automaticamente en la app de tu celular (mientras esten en la misma red).
+
+---
+
+## Para publicar en las tiendas
+
+Cuando estes listo para publicar, deberas:
+
+1. Cambiar la configuracion de `capacitor.config.ts` para que use archivos locales en lugar del servidor
+2. Ejecutar `npm run build` y `npx cap sync`
+3. Seguir los procesos de publicacion de Apple (App Store Connect) y Google (Play Console)
+
+---
+
+## Notas importantes
+
+- Tu vista publica `/app` ya esta optimizada para moviles, asi que sera la experiencia principal en la app
+- La base de datos (Lovable Cloud) seguira siendo la misma, sin cambios
+- Puedes agregar funcionalidades nativas despues (camara, notificaciones push, GPS nativo, etc.)
+
+---
+
+## Seccion Tecnica
 
 ### Archivos a crear/modificar
 
-| Archivo | Acción | Descripción |
+| Archivo | Accion | Descripcion |
 |---------|--------|-------------|
-| `src/hooks/useAuth.tsx` | Modificar | Agregar lógica de supervisor |
-| `src/components/layout/DashboardLayout.tsx` | Modificar | Permitir supervisores |
-| `src/components/layout/Sidebar.tsx` | Modificar | Mostrar rol correcto |
-| `src/pages/Supervisors.tsx` | Crear | Gestión de supervisores |
-| `supabase/functions/create-supervisor/index.ts` | Crear | Edge function |
-| Migración SQL | Crear | Tablas y funciones |
+| `capacitor.config.ts` | Crear | Configuracion principal de Capacitor |
+| `package.json` | Modificar | Agregar dependencias de Capacitor |
+| `index.html` | Modificar | Meta tags para app nativa |
+| `src/index.css` | Modificar | Estilos para safe areas |
+
+### Configuracion de Capacitor
+
+```typescript
+import type { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'app.lovable.9a6495a750ba4666955c20882df3fa9a',
+  appName: 'tebsapp',
+  webDir: 'dist',
+  server: {
+    url: 'https://9a6495a7-50ba-4666-955c-20882df3fa9a.lovableproject.com?forceHideBadge=true',
+    cleartext: true
+  }
+};
+
+export default config;
+```
+
+### Recurso adicional
+
+Para mas informacion sobre el proceso completo, te recomiendo leer la guia oficial de Lovable sobre desarrollo movil con Capacitor.
+
