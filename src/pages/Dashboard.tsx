@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, Route, Bus, CalendarClock } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Building2, Route, Bus, CalendarClock, FileText, Users } from 'lucide-react';
+import TripsReport from '@/components/reports/TripsReport';
+import PassengersReport from '@/components/reports/PassengersReport';
 
 const Dashboard = () => {
   const { data: stats } = useQuery({
@@ -53,21 +56,25 @@ const Dashboard = () => {
         ))}
       </div>
 
-      <Card>
-        <CardHeader className="p-4 md:p-6">
-          <CardTitle className="text-lg md:text-xl">Bienvenido a TransportePro</CardTitle>
-        </CardHeader>
-        <CardContent className="text-muted-foreground text-sm md:text-base p-4 pt-0 md:p-6 md:pt-0">
-          <p>Este sistema te permite gestionar:</p>
-          <ul className="list-disc list-inside mt-2 space-y-1">
-            <li><strong>Clientes:</strong> Empresas que contratan el servicio</li>
-            <li><strong>Rutas:</strong> Recorridos con visualización en mapa</li>
-            <li><strong>Unidades:</strong> Vehículos con información del conductor</li>
-            <li><strong>Asignaciones:</strong> Programación de rutas</li>
-            <li><strong>Rastreo GPS:</strong> Seguimiento en tiempo real</li>
-          </ul>
-        </CardContent>
-      </Card>
+      {/* Reports Section */}
+      <Tabs defaultValue="trips" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsTrigger value="trips" className="gap-2">
+            <FileText className="w-4 h-4" />
+            <span className="hidden sm:inline">Reporte de</span> Viajes
+          </TabsTrigger>
+          <TabsTrigger value="passengers" className="gap-2">
+            <Users className="w-4 h-4" />
+            <span className="hidden sm:inline">Reporte de</span> Pasajeros
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="trips" className="mt-4">
+          <TripsReport />
+        </TabsContent>
+        <TabsContent value="passengers" className="mt-4">
+          <PassengersReport />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
