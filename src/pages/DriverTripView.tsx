@@ -213,6 +213,24 @@ const DriverTripView = () => {
     if (!assignment || !driver) return;
 
     try {
+      // Get current GPS location
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+      
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0
+          });
+        });
+        latitude = position.coords.latitude;
+        longitude = position.coords.longitude;
+      } catch (geoError) {
+        console.warn('Could not get location:', geoError);
+      }
+
       // Check if QR is valid for this route
       const { data: qrData } = await supabase
         .from('passenger_qr_codes')
@@ -221,9 +239,9 @@ const DriverTripView = () => {
         .maybeSingle();
 
       const isValid = qrData?.is_active && 
-        qrData?.allowed_route_ids?.includes(assignment.route_id);
+        (qrData?.allowed_route_ids?.length === 0 || qrData?.allowed_route_ids?.includes(assignment.route_id));
 
-      // Register boarding
+      // Register boarding with location
       const { error } = await supabase
         .from('passenger_boardings')
         .insert({
@@ -233,6 +251,8 @@ const DriverTripView = () => {
           route_id: assignment.route_id,
           driver_id: driver.id,
           is_valid: isValid || false,
+          latitude,
+          longitude,
           validation_message: isValid 
             ? `Pasajero válido: ${qrData?.employee_name}` 
             : qrData 
