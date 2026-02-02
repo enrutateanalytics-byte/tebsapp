@@ -142,11 +142,11 @@ const PassengerQRGenerator = ({ clientId, userName }: PassengerQRGeneratorProps)
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button 
-          size="icon" 
-          variant="secondary"
-          className="h-12 w-12 rounded-full shadow-lg bg-card hover:bg-accent"
+          size="lg"
+          className="h-14 px-5 rounded-full shadow-xl bg-primary hover:bg-primary/90 text-primary-foreground gap-2 font-semibold"
         >
-          <QrCode className="w-5 h-5" />
+          <QrCode className="w-6 h-6" />
+          Mi QR
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
