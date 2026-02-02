@@ -12,11 +12,15 @@ import Units from "./pages/Units";
 import Assignments from "./pages/Assignments";
 import Tracking from "./pages/Tracking";
 import Supervisors from "./pages/Supervisors";
+import Drivers from "./pages/Drivers";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import NotFound from "./pages/NotFound";
 import PublicLogin from "./pages/PublicLogin";
 import PublicApp from "./pages/PublicApp";
 import Privacy from "./pages/Privacy";
+import DriverLogin from "./pages/DriverLogin";
+import DriverApp from "./pages/DriverApp";
+import DriverTripView from "./pages/DriverTripView";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +39,10 @@ const App = () => (
             <Route path="/public-login" element={<PublicLogin />} />
             <Route path="/app" element={<PublicApp />} />
             <Route path="/privacidad" element={<Privacy />} />
+            {/* Driver app routes */}
+            <Route path="/driver-login" element={<DriverLogin />} />
+            <Route path="/driver-app" element={<DriverApp />} />
+            <Route path="/driver-app/trip/:id" element={<DriverTripView />} />
             {/* Admin routes */}
             <Route element={<DashboardLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
@@ -44,6 +52,7 @@ const App = () => (
               <Route path="/assignments" element={<Assignments />} />
               <Route path="/tracking" element={<Tracking />} />
               <Route path="/supervisors" element={<Supervisors />} />
+              <Route path="/drivers" element={<Drivers />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
