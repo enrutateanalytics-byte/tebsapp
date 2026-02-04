@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Check if username already exists in client_users
+    // Check if username already exists
     const { data: existingUser, error: existingError } = await adminClient
       .from('client_users')
       .select('id')
@@ -141,9 +141,7 @@ Deno.serve(async (req) => {
     // Generate internal email for Supabase Auth (users won't see this)
     const internalEmail = `${username.toLowerCase()}@internal.transportepro.app`
 
-    let userId: string
-
-    // Try to create the user in auth.users
+    // Create the user in auth.users
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email: internalEmail,
       password,
@@ -153,82 +151,20 @@ Deno.serve(async (req) => {
     if (authError) {
       console.error('Error creating auth user:', authError)
       
-      // If email already exists, check if it's an orphaned auth user (no client_users record)
       if (authError.message.includes('already been registered')) {
-        console.log('Auth user exists, checking for orphaned user...')
-        
-        // Find the existing auth user by email
-        const { data: existingAuthUsers, error: listError } = await adminClient.auth.admin.listUsers()
-        
-        if (listError) {
-          console.error('Error listing users:', listError)
-          return new Response(
-            JSON.stringify({ error: 'Error verificando usuarios existentes' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          )
-        }
-        
-        const existingAuthUser = existingAuthUsers.users.find(u => u.email === internalEmail)
-        
-        if (!existingAuthUser) {
-          return new Response(
-            JSON.stringify({ error: 'Este nombre de usuario ya está registrado' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          )
-        }
-        
-        // Check if this auth user has a client_users record
-        const { data: linkedClientUser } = await adminClient
-          .from('client_users')
-          .select('id')
-          .eq('user_id', existingAuthUser.id)
-          .maybeSingle()
-        
-        if (linkedClientUser) {
-          // User is already fully registered
-          return new Response(
-            JSON.stringify({ error: 'Este nombre de usuario ya está registrado' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          )
-        }
-        
-        // Orphaned auth user found - delete it and create fresh
-        console.log('Found orphaned auth user, deleting and recreating...')
-        const { error: deleteError } = await adminClient.auth.admin.deleteUser(existingAuthUser.id)
-        
-        if (deleteError) {
-          console.error('Error deleting orphaned user:', deleteError)
-          return new Response(
-            JSON.stringify({ error: 'Error limpiando usuario huérfano' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          )
-        }
-        
-        // Now create fresh auth user
-        const { data: newAuthData, error: newAuthError } = await adminClient.auth.admin.createUser({
-          email: internalEmail,
-          password,
-          email_confirm: true,
-        })
-        
-        if (newAuthError) {
-          console.error('Error creating new auth user after cleanup:', newAuthError)
-          return new Response(
-            JSON.stringify({ error: 'Error creando usuario después de limpieza' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          )
-        }
-        
-        userId = newAuthData.user.id
-      } else {
         return new Response(
-          JSON.stringify({ error: 'Error creando usuario: ' + authError.message }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'Este nombre de usuario ya está registrado' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
-    } else {
-      userId = authData.user.id
+      
+      return new Response(
+        JSON.stringify({ error: 'Error creando usuario: ' + authError.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
+
+    const userId = authData.user.id
 
     // Create the client_users record
     const { data: clientUser, error: clientUserError } = await adminClient
