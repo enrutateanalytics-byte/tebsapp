@@ -52,14 +52,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // Listener primero (evita perder eventos) y SIN callback async
+    let isMounted = true;
+
+    // Listener para cambios CONTINUOS de auth (NO controla loading)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return;
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
 
+      // Fire and forget - no await, no loading
       if (session?.user) {
         setTimeout(() => {
           checkUserRoles(session.user.id);
@@ -70,23 +73,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     });
 
-    // Luego: obtener sesión existente
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
+    // Carga INICIAL (controla loading)
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!isMounted) return;
 
-      if (session?.user) {
-        setTimeout(() => {
-          checkUserRoles(session.user.id);
-        }, 0);
-      } else {
-        setIsAdmin(false);
-        setIsSupervisor(false);
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        // Verificar roles ANTES de quitar loading
+        if (session?.user) {
+          await checkUserRoles(session.user.id);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
       }
-    });
+    };
 
-    return () => subscription.unsubscribe();
+    initializeAuth();
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
