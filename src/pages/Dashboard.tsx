@@ -1,9 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Route, Bus, CalendarClock, FileText, Users } from 'lucide-react';
-import TripsReport from '@/components/reports/TripsReport';
+import { Building2, Route, Bus, CalendarClock } from 'lucide-react';
 import PassengersReport from '@/components/reports/PassengersReport';
 
 const Dashboard = () => {
@@ -57,24 +55,7 @@ const Dashboard = () => {
       </div>
 
       {/* Reports Section */}
-      <Tabs defaultValue="trips" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
-          <TabsTrigger value="trips" className="gap-2">
-            <FileText className="w-4 h-4" />
-            <span className="hidden sm:inline">Reporte de</span> Viajes
-          </TabsTrigger>
-          <TabsTrigger value="passengers" className="gap-2">
-            <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">Reporte de</span> Pasajeros
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="trips" className="mt-4">
-          <TripsReport />
-        </TabsContent>
-        <TabsContent value="passengers" className="mt-4">
-          <PassengersReport />
-        </TabsContent>
-      </Tabs>
+      <PassengersReport />
     </div>
   );
 };
