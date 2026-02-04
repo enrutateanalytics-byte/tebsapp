@@ -22,33 +22,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isSupervisor, setIsSupervisor] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const checkAdminStatus = async (userId: string) => {
-    const { data } = await supabase
-      .from('administrators')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle();
-    
-    setIsAdmin(!!data);
-  };
-
-  const checkSupervisorStatus = async (userId: string) => {
-    const { data } = await supabase
-      .from('supervisors')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .maybeSingle();
-    
-    setIsSupervisor(!!data);
-  };
-
   const checkUserRoles = async (userId: string) => {
-    // Check both roles in parallel
-    await Promise.all([
-      checkAdminStatus(userId),
-      checkSupervisorStatus(userId)
-    ]);
+    try {
+      // Check both roles in parallel
+      const [adminResult, supervisorResult] = await Promise.all([
+        supabase
+          .from('administrators')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle(),
+        supabase
+          .from('supervisors')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .maybeSingle()
+      ]);
+      
+      setIsAdmin(!!adminResult.data);
+      setIsSupervisor(!!supervisorResult.data);
+    } catch (error) {
+      console.error('Error checking user roles:', error);
+      setIsAdmin(false);
+      setIsSupervisor(false);
+    }
   };
 
   useEffect(() => {
