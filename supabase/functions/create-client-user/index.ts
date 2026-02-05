@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Check if username already exists
+    // Check if username already exists in client_users
     const { data: existingUser, error: existingError } = await adminClient
       .from('client_users')
       .select('id')
@@ -141,30 +141,62 @@ Deno.serve(async (req) => {
     // Generate internal email for Supabase Auth (users won't see this)
     const internalEmail = `${username.toLowerCase()}@internal.transportepro.app`
 
-    // Create the user in auth.users
-    const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
-      email: internalEmail,
-      password,
-      email_confirm: true, // Auto-confirm email
-    })
+    // Check if auth user with this email already exists (could be orphaned from failed creation)
+    const { data: existingAuthUsers } = await adminClient.auth.admin.listUsers()
+    const existingAuthUser = existingAuthUsers?.users?.find(u => u.email === internalEmail)
+    
+    let userId: string
 
-    if (authError) {
-      console.error('Error creating auth user:', authError)
+    if (existingAuthUser) {
+      // Check if this auth user already has a client_users record
+      const { data: linkedClientUser } = await adminClient
+        .from('client_users')
+        .select('id')
+        .eq('user_id', existingAuthUser.id)
+        .maybeSingle()
       
-      if (authError.message.includes('already been registered')) {
+      if (linkedClientUser) {
+        // User fully exists, can't create again
         return new Response(
-          JSON.stringify({ error: 'Este nombre de usuario ya está registrado' }),
+          JSON.stringify({ error: 'Este nombre de usuario ya está registrado y tiene una cuenta activa' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
       
-      return new Response(
-        JSON.stringify({ error: 'Error creando usuario: ' + authError.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+      // Auth user exists but no client_users record - update password and reuse
+      console.log('Found orphaned auth user, updating password and reusing:', existingAuthUser.id)
+      const { error: updateError } = await adminClient.auth.admin.updateUserById(existingAuthUser.id, {
+        password,
+        email_confirm: true,
+      })
+      
+      if (updateError) {
+        console.error('Error updating orphaned auth user:', updateError)
+        return new Response(
+          JSON.stringify({ error: 'Error actualizando usuario existente' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      userId = existingAuthUser.id
+    } else {
+      // Create new auth user
+      const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+        email: internalEmail,
+        password,
+        email_confirm: true,
+      })
 
-    const userId = authData.user.id
+      if (authError) {
+        console.error('Error creating auth user:', authError)
+        return new Response(
+          JSON.stringify({ error: 'Error creando usuario: ' + authError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      userId = authData.user.id
+    }
 
     // Create the client_users record
     const { data: clientUser, error: clientUserError } = await adminClient
@@ -183,8 +215,10 @@ Deno.serve(async (req) => {
     if (clientUserError) {
       console.error('Error creating client_user record:', clientUserError)
       
-      // Rollback: delete the auth user if we couldn't create the client_users record
-      await adminClient.auth.admin.deleteUser(userId)
+      // Only rollback (delete auth user) if we created a new one (not reusing orphaned)
+      if (!existingAuthUser) {
+        await adminClient.auth.admin.deleteUser(userId)
+      }
       
       return new Response(
         JSON.stringify({ error: 'Error creando registro de usuario de cliente' }),
