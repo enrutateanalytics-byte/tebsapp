@@ -61,6 +61,31 @@ serve(async (req) => {
       );
     }
 
+    // Check if email already exists in supervisors table
+    const { data: existingSupervisor } = await supabaseAdmin
+      .from("supervisors")
+      .select("id, email")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (existingSupervisor) {
+      return new Response(
+        JSON.stringify({ error: "Ya existe un supervisor con este correo electrónico" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if email exists in auth.users (could be admin, driver, etc.)
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const emailExists = existingUsers?.users?.some(u => u.email?.toLowerCase() === email.toLowerCase());
+
+    if (emailExists) {
+      return new Response(
+        JSON.stringify({ error: "Este correo ya está registrado en el sistema (puede ser administrador, conductor u otro rol)" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Create user in auth.users
     const { data: authData, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
       email,
