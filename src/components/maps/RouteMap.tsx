@@ -1,6 +1,6 @@
 import { GoogleMap, Polyline, Marker, InfoWindow } from '@react-google-maps/api';
-import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { KmlStop } from '@/lib/kmlParser';
 
@@ -27,6 +27,10 @@ const containerStyle = {
 
 const RouteMap = ({ coordinates, stops = [], routeId, className }: RouteMapProps) => {
   const [selectedStop, setSelectedStop] = useState<{ stop: KmlStop; index: number } | null>(null);
+  const queryClient = useQueryClient();
+  const pollIntervalRef = useRef(5000); // Start with 5 seconds
+  const lastSyncRef = useRef<string | null>(null);
+
   // Get assignments for this route
   const { data: assignments } = useQuery({
     queryKey: ['route-assignments', routeId],
@@ -64,11 +68,93 @@ const RouteMap = ({ coordinates, stops = [], routeId, className }: RouteMapProps
           latestByUnit.set(pos.unit_id, pos);
         }
       });
-      return Array.from(latestByUnit.values());
+      
+      const positions = Array.from(latestByUnit.values());
+      if (positions.length > 0) {
+        lastSyncRef.current = positions[0].recorded_at;
+      }
+      return positions;
     },
     enabled: unitIds.length > 0,
-    refetchInterval: 30000,
+    refetchInterval: 10000, // Fallback polling every 10 seconds
   });
+
+  // Realtime subscription for GPS updates
+  useEffect(() => {
+    if (unitIds.length === 0) return;
+
+    const channel = supabase
+      .channel(`route-gps-${routeId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'gps_positions',
+        },
+        (payload) => {
+          // Check if the update is for one of our units
+          const newRecord = payload.new as GpsPosition | undefined;
+          if (newRecord && unitIds.includes(newRecord.unit_id)) {
+            console.log('Realtime GPS update received:', newRecord.unit_id);
+            // Invalidate query to refresh positions
+            queryClient.invalidateQueries({ queryKey: ['route-gps-positions', unitIds] });
+            pollIntervalRef.current = 5000; // Reset poll interval on realtime event
+          }
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Subscribed to GPS realtime updates for route:', routeId);
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('Realtime channel error, relying on polling fallback');
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [unitIds, routeId, queryClient]);
+
+  // Polling fallback with exponential backoff
+  useEffect(() => {
+    if (unitIds.length === 0) return;
+
+    const poll = async () => {
+      try {
+        const query = supabase
+          .from('gps_positions')
+          .select('id, unit_id, latitude, longitude, recorded_at')
+          .in('unit_id', unitIds)
+          .order('recorded_at', { ascending: false });
+
+        // Only fetch newer records if we have a last sync timestamp
+        if (lastSyncRef.current) {
+          query.gt('recorded_at', lastSyncRef.current);
+        }
+
+        const { data, error } = await query.limit(unitIds.length);
+
+        if (!error && data && data.length > 0) {
+          console.log('Polling detected new GPS data:', data.length, 'records');
+          queryClient.invalidateQueries({ queryKey: ['route-gps-positions', unitIds] });
+          pollIntervalRef.current = 5000; // Reset on new data
+        } else {
+          // No new data, increase interval (max 30 seconds)
+          pollIntervalRef.current = Math.min(pollIntervalRef.current * 1.5, 30000);
+        }
+      } catch (error) {
+        console.error('Polling error:', error);
+        pollIntervalRef.current = Math.min(pollIntervalRef.current * 1.5, 30000);
+      }
+    };
+
+    const intervalId = setInterval(() => {
+      poll();
+    }, pollIntervalRef.current);
+
+    return () => clearInterval(intervalId);
+  }, [unitIds, queryClient]);
 
   const center = useMemo(() => {
     if (coordinates.length === 0) {
