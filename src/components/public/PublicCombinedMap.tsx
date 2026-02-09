@@ -16,6 +16,8 @@ interface GpsPosition {
   unit_id: string;
   latitude: number;
   longitude: number;
+  speed: number | null;
+  heading: number | null;
   recorded_at: string;
   units?: { plate_number: string } | null;
 }
@@ -25,6 +27,8 @@ interface AnimatedPosition {
   target: google.maps.LatLngLiteral;
   plateNumber: string;
   unitId: string;
+  speed: number; // km/h
+  heading: number; // degrees
 }
 
 interface PublicCombinedMapProps {
@@ -160,77 +164,125 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
     refetchInterval: 10000, // Actualizar cada 10 segundos
   });
 
-  // Animate markers when positions change
+  // Helper: move a lat/lng point by speed (km/h) and heading (degrees) for a given duration (ms)
+  const interpolatePosition = useCallback(
+    (pos: google.maps.LatLngLiteral, speedKmh: number, headingDeg: number, durationMs: number): google.maps.LatLngLiteral => {
+      if (speedKmh <= 0) return pos;
+      const durationHours = durationMs / 3_600_000;
+      const distanceKm = speedKmh * durationHours;
+      const R = 6371; // Earth radius km
+      const d = distanceKm / R;
+      const brng = (headingDeg * Math.PI) / 180;
+      const lat1 = (pos.lat * Math.PI) / 180;
+      const lng1 = (pos.lng * Math.PI) / 180;
+      const lat2 = Math.asin(Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(brng));
+      const lng2 = lng1 + Math.atan2(Math.sin(brng) * Math.sin(d) * Math.cos(lat1), Math.cos(d) - Math.sin(lat1) * Math.sin(lat2));
+      return { lat: (lat2 * 180) / Math.PI, lng: (lng2 * 180) / Math.PI };
+    },
+    []
+  );
+
+  // Update targets when positions change AND interpolate between updates
   useEffect(() => {
     if (!positions || positions.length === 0) return;
 
-    // Set up new targets for animation
-    const newAnimatedPositions = new Map<string, AnimatedPosition>();
-    
+    // Set new targets from fetched positions
     positions.forEach((pos) => {
       const targetPos = { lat: Number(pos.latitude), lng: Number(pos.longitude) };
-      const lastPos = lastPositionsRef.current.get(pos.unit_id);
-      
-      // If we have a previous position, animate from there
-      const currentPos = lastPos || targetPos;
-      
-      newAnimatedPositions.set(pos.unit_id, {
-        current: currentPos,
-        target: targetPos,
-        plateNumber: pos.units?.plate_number || 'Unidad',
-        unitId: pos.unit_id,
-      });
-      
-      // Update last known position
-      lastPositionsRef.current.set(pos.unit_id, targetPos);
-    });
-
-    setAnimatedPositions(newAnimatedPositions);
-
-    // Start animation
-    const animationDuration = 2000; // 2 seconds for smooth transition
-    const startTime = Date.now();
-
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / animationDuration, 1);
-      
-      // Easing function for smoother animation
-      const easeProgress = 1 - Math.pow(1 - progress, 3);
+      const speed = Number(pos.speed) || 0;
+      const heading = Number(pos.heading) || 0;
 
       setAnimatedPositions((prev) => {
         const updated = new Map(prev);
-        updated.forEach((pos, unitId) => {
-          if (progress < 1) {
-            const newLat = pos.current.lat + (pos.target.lat - pos.current.lat) * easeProgress;
-            const newLng = pos.current.lng + (pos.target.lng - pos.current.lng) * easeProgress;
-            updated.set(unitId, {
-              ...pos,
-              current: { lat: newLat, lng: newLng },
-            });
-          } else {
-            updated.set(unitId, {
-              ...pos,
-              current: pos.target,
-            });
-          }
-        });
+        const existing = updated.get(pos.unit_id);
+        
+        // Check if coordinates actually changed
+        const lastKnown = lastPositionsRef.current.get(pos.unit_id);
+        const coordsChanged = !lastKnown || 
+          Math.abs(lastKnown.lat - targetPos.lat) > 0.000005 || 
+          Math.abs(lastKnown.lng - targetPos.lng) > 0.000005;
+
+        if (coordsChanged) {
+          // Real GPS update – snap target
+          updated.set(pos.unit_id, {
+            current: existing?.current || targetPos,
+            target: targetPos,
+            plateNumber: pos.units?.plate_number || 'Unidad',
+            unitId: pos.unit_id,
+            speed,
+            heading,
+          });
+          lastPositionsRef.current.set(pos.unit_id, targetPos);
+        } else if (existing) {
+          // Same coords – just update speed/heading for interpolation
+          updated.set(pos.unit_id, { ...existing, speed, heading });
+        } else {
+          updated.set(pos.unit_id, {
+            current: targetPos,
+            target: targetPos,
+            plateNumber: pos.units?.plate_number || 'Unidad',
+            unitId: pos.unit_id,
+            speed,
+            heading,
+          });
+          lastPositionsRef.current.set(pos.unit_id, targetPos);
+        }
         return updated;
       });
+    });
+  }, [positions]);
 
-      if (progress < 1) {
-        animationFrameRef.current = requestAnimationFrame(animate);
-      }
+  // Continuous interpolation loop – moves markers smoothly using speed + heading
+  useEffect(() => {
+    let lastTick = Date.now();
+
+    const tick = () => {
+      const now = Date.now();
+      const dt = now - lastTick;
+      lastTick = now;
+
+      setAnimatedPositions((prev) => {
+        let changed = false;
+        const updated = new Map(prev);
+
+        updated.forEach((pos, unitId) => {
+          // If speed > 2 km/h, interpolate forward
+          if (pos.speed > 2) {
+            const newCurrent = interpolatePosition(pos.current, pos.speed, pos.heading, dt);
+            updated.set(unitId, { ...pos, current: newCurrent });
+            changed = true;
+          } else {
+            // Ease toward target if not yet there
+            const dLat = pos.target.lat - pos.current.lat;
+            const dLng = pos.target.lng - pos.current.lng;
+            if (Math.abs(dLat) > 0.000001 || Math.abs(dLng) > 0.000001) {
+              const ease = 0.15;
+              updated.set(unitId, {
+                ...pos,
+                current: {
+                  lat: pos.current.lat + dLat * ease,
+                  lng: pos.current.lng + dLng * ease,
+                },
+              });
+              changed = true;
+            }
+          }
+        });
+
+        return changed ? updated : prev;
+      });
+
+      animationFrameRef.current = requestAnimationFrame(tick);
     };
 
-    animationFrameRef.current = requestAnimationFrame(animate);
+    animationFrameRef.current = requestAnimationFrame(tick);
 
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [positions]);
+  }, [interpolatePosition]);
 
   const center = useMemo(() => {
     // Priority: route coordinates, then unit positions, then user location, then default
