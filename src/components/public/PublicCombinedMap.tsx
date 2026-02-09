@@ -227,23 +227,18 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
     };
   }, [positions]);
 
-  const center = useMemo(() => {
-    // Priority: route coordinates, then unit positions, then user location, then default
+  // Only compute initial center (not reactive to GPS updates)
+  const initialCenter = useMemo(() => {
     if (routeCoordinates.length > 0) {
       const sumLat = routeCoordinates.reduce((acc, p) => acc + p.lat, 0);
       const sumLng = routeCoordinates.reduce((acc, p) => acc + p.lng, 0);
       return { lat: sumLat / routeCoordinates.length, lng: sumLng / routeCoordinates.length };
     }
-    if (positions && positions.length > 0) {
-      const sumLat = positions.reduce((acc, p) => acc + Number(p.latitude), 0);
-      const sumLng = positions.reduce((acc, p) => acc + Number(p.longitude), 0);
-      return { lat: sumLat / positions.length, lng: sumLng / positions.length };
-    }
     if (userLocation) {
       return userLocation;
     }
     return defaultCenter;
-  }, [routeCoordinates, positions, userLocation]);
+  }, [routeCoordinates, userLocation]);
 
   // Fit bounds only when route or stops change (not on GPS position updates)
   useEffect(() => {
@@ -277,7 +272,7 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
   return (
     <GoogleMap
       mapContainerStyle={containerStyle}
-      center={center}
+      center={initialCenter}
       zoom={12}
       onLoad={handleMapLoad}
     >
