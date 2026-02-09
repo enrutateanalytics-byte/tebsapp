@@ -245,18 +245,17 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
     return defaultCenter;
   }, [routeCoordinates, positions, userLocation]);
 
-  // Fit bounds whenever route, stops, or positions change
+  // Fit bounds only when route or stops change (not on GPS position updates)
   useEffect(() => {
     if (!mapRef.current) return;
-    if (routeCoordinates.length === 0 && stops.length === 0 && (!positions || positions.length === 0)) return;
+    if (routeCoordinates.length === 0 && stops.length === 0) return;
     
     const bounds = new google.maps.LatLngBounds();
     routeCoordinates.forEach(coord => bounds.extend(coord));
     stops.forEach(stop => bounds.extend({ lat: stop.lat, lng: stop.lng }));
-    positions?.forEach(pos => bounds.extend({ lat: Number(pos.latitude), lng: Number(pos.longitude) }));
     
     mapRef.current.fitBounds(bounds, 50);
-  }, [routeCoordinates, stops, positions]);
+  }, [routeCoordinates, stops]);
 
   const handleMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
