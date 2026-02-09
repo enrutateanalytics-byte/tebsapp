@@ -437,22 +437,21 @@ Deno.serve(async (req) => {
       )
     }
     
-    // Check if user is administrator, supervisor, or client user
-    const [{ data: isAdmin }, { data: isSupervisor }, { data: isClientUser }] = await Promise.all([
+    // Check if user is administrator or supervisor
+    const [{ data: isAdmin }, { data: isSupervisor }] = await Promise.all([
       supabaseAuth.rpc('is_administrator'),
       supabaseAuth.rpc('is_supervisor'),
-      supabaseAuth.rpc('is_client_user'),
     ])
     
-    if (!isAdmin && !isSupervisor && !isClientUser) {
-      console.log('User has no valid role:', claimsData.claims.sub)
+    if (!isAdmin && !isSupervisor) {
+      console.log('User is not administrator or supervisor:', claimsData.claims.sub)
       return new Response(
-        JSON.stringify({ error: 'Forbidden - Access required' }),
+        JSON.stringify({ error: 'Forbidden - Administrator or Supervisor access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
     
-    console.log('Authenticated as', isAdmin ? 'administrator' : isSupervisor ? 'supervisor' : 'client_user', ':', claimsData.claims.sub)
+    console.log('Authenticated as', isAdmin ? 'administrator' : 'supervisor', ':', claimsData.claims.sub)
     // === END AUTHENTICATION CHECK ===
     
     // Get URL params for mode
@@ -559,49 +558,22 @@ Deno.serve(async (req) => {
       }
     }
     
-    // Get latest known positions for all units to avoid inserting duplicates
-    const unitIds = Array.from(imeiToUnitId.values())
-    const { data: latestPositions } = await supabase
-      .from('gps_positions')
-      .select('unit_id, latitude, longitude')
-      .in('unit_id', unitIds)
-      .order('recorded_at', { ascending: false })
-    
-    // Build map of latest position per unit
-    const lastPosMap = new Map<string, { lat: number; lng: number }>()
-    if (latestPositions) {
-      for (const pos of latestPositions) {
-        if (!lastPosMap.has(pos.unit_id)) {
-          lastPosMap.set(pos.unit_id, { lat: Number(pos.latitude), lng: Number(pos.longitude) })
-        }
-      }
-    }
-
-    // Insert only positions that actually changed
+    // Insert new positions
     let syncedCount = 0
-    let skippedCount = 0
     for (const location of locations) {
       const unitId = imeiToUnitId.get(location.imei)
       
       if (!unitId) {
+        console.log(`No unit found for IMEI ${location.imei}`)
         continue
       }
       
       if (!location.lat || !location.lng) {
+        console.log(`Invalid coordinates for IMEI ${location.imei}`)
         continue
       }
       
-      // Skip if coordinates haven't changed (within ~1 meter tolerance)
-      const lastPos = lastPosMap.get(unitId)
-      if (lastPos) {
-        const latDiff = Math.abs(lastPos.lat - location.lat)
-        const lngDiff = Math.abs(lastPos.lng - location.lng)
-        if (latDiff < 0.00001 && lngDiff < 0.00001) {
-          skippedCount++
-          continue
-        }
-      }
-      
+      // Insert new position (always insert to track history)
       const { error: insertError } = await supabase
         .from('gps_positions')
         .insert({
@@ -617,12 +589,9 @@ Deno.serve(async (req) => {
         console.error(`Failed to insert position for unit ${unitId}:`, insertError.message)
       } else {
         syncedCount++
-        // Update our local map for subsequent checks
-        lastPosMap.set(unitId, { lat: location.lat, lng: location.lng })
+        console.log(`Synced position for IMEI ${location.imei}: ${location.lat}, ${location.lng}`)
       }
     }
-    
-    console.log(`Skipped ${skippedCount} unchanged positions`)
     
     // Update success state
     await supabase
