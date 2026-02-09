@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { GoogleMap, Marker, Polyline, InfoWindow } from '@react-google-maps/api';
 import { supabase } from '@/integrations/supabase/client';
 import { stringToCoordinates, stringToStops, KmlStop } from '@/lib/kmlParser';
@@ -48,6 +48,7 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
   const mapRef = useRef<google.maps.Map | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastPositionsRef = useRef<Map<string, google.maps.LatLngLiteral>>(new Map());
+  const queryClient = useQueryClient();
 
   // Get user's device location on mount
   useEffect(() => {
@@ -105,6 +106,32 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
   });
 
   const unitIds = useMemo(() => [...new Set(assignments?.map(a => a.unit_id) || [])], [assignments]);
+
+  // Auto-sync GPS from Tracksolid every 10 seconds when a route is selected
+  useEffect(() => {
+    if (!route?.id) return;
+
+    const syncGps = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('sync-tracksolid', {
+          method: 'POST',
+        });
+        if (!error && data?.success) {
+          console.log(`Auto-sync GPS: ${data.synced} unidades actualizadas`);
+          queryClient.invalidateQueries({ queryKey: ['public-gps-positions'] });
+        }
+      } catch (err) {
+        console.warn('Auto-sync GPS error:', err);
+      }
+    };
+
+    // Initial sync when route is selected
+    syncGps();
+
+    // Then sync every 10 seconds
+    const intervalId = setInterval(syncGps, 10000);
+    return () => clearInterval(intervalId);
+  }, [route?.id, queryClient]);
 
   // Get GPS positions only for units assigned to the selected route
   const { data: positions } = useQuery({
