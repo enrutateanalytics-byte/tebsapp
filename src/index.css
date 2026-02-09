@@ -135,3 +135,13 @@ All colors MUST be HSL.
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
+
+/* Bus marker label on Google Maps */
+.bus-label {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 1px 4px;
+  border-radius: 4px;
+  margin-top: 28px !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  white-space: nowrap;
+}
