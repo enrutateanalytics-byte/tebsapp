@@ -182,28 +182,37 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
     []
   );
 
+  // Clear animated positions when route changes
+  useEffect(() => {
+    setAnimatedPositions(new Map());
+    lastPositionsRef.current = new Map();
+  }, [route?.id]);
+
   // Update targets when positions change AND interpolate between updates
   useEffect(() => {
-    if (!positions || positions.length === 0) return;
+    if (!positions || positions.length === 0) {
+      setAnimatedPositions(new Map());
+      return;
+    }
 
-    // Set new targets from fetched positions
-    positions.forEach((pos) => {
-      const targetPos = { lat: Number(pos.latitude), lng: Number(pos.longitude) };
-      const speed = Number(pos.speed) || 0;
-      const heading = Number(pos.heading) || 0;
+    // Build a fresh map with ONLY current route's units
+    const validUnitIds = new Set(positions.map(p => p.unit_id));
 
-      setAnimatedPositions((prev) => {
-        const updated = new Map(prev);
-        const existing = updated.get(pos.unit_id);
-        
-        // Check if coordinates actually changed
+    setAnimatedPositions((prev) => {
+      const updated = new Map<string, AnimatedPosition>();
+
+      positions.forEach((pos) => {
+        const targetPos = { lat: Number(pos.latitude), lng: Number(pos.longitude) };
+        const speed = Number(pos.speed) || 0;
+        const heading = Number(pos.heading) || 0;
+        const existing = prev.get(pos.unit_id);
+
         const lastKnown = lastPositionsRef.current.get(pos.unit_id);
-        const coordsChanged = !lastKnown || 
-          Math.abs(lastKnown.lat - targetPos.lat) > 0.000005 || 
+        const coordsChanged = !lastKnown ||
+          Math.abs(lastKnown.lat - targetPos.lat) > 0.000005 ||
           Math.abs(lastKnown.lng - targetPos.lng) > 0.000005;
 
         if (coordsChanged) {
-          // Real GPS update – snap target
           updated.set(pos.unit_id, {
             current: existing?.current || targetPos,
             target: targetPos,
@@ -214,7 +223,6 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
           });
           lastPositionsRef.current.set(pos.unit_id, targetPos);
         } else if (existing) {
-          // Same coords – just update speed/heading for interpolation
           updated.set(pos.unit_id, { ...existing, speed, heading });
         } else {
           updated.set(pos.unit_id, {
@@ -227,8 +235,10 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
           });
           lastPositionsRef.current.set(pos.unit_id, targetPos);
         }
-        return updated;
       });
+
+      // Remove any stale entries from previous routes
+      return updated;
     });
   }, [positions]);
 
