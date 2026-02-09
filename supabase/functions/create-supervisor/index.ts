@@ -75,18 +75,8 @@ serve(async (req) => {
       );
     }
 
-    // Check if email exists in auth.users (could be admin, driver, etc.)
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const emailExists = existingUsers?.users?.some(u => u.email?.toLowerCase() === email.toLowerCase());
-
-    if (emailExists) {
-      return new Response(
-        JSON.stringify({ error: "Este correo ya está registrado en el sistema (puede ser administrador, conductor u otro rol)" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Create user in auth.users
+    // Try to create user in auth.users
+    let authUserId: string;
     const { data: authData, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -94,18 +84,53 @@ serve(async (req) => {
     });
 
     if (createAuthError) {
-      console.error("Error creating auth user:", createAuthError);
-      return new Response(
-        JSON.stringify({ error: createAuthError.message }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      // If user already exists in auth, check if it's an orphaned account (no role linked)
+      if (createAuthError.message?.includes("already been registered") || createAuthError.status === 422) {
+        // Find the existing auth user
+        const { data: listData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+        const existingAuthUser = listData?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+        
+        if (!existingAuthUser) {
+          return new Response(
+            JSON.stringify({ error: "Error inesperado: no se encontró el usuario existente" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Check if this auth user has any role (admin, driver, other supervisor, client_user)
+        const [adminCheck, driverCheck, clientCheck] = await Promise.all([
+          supabaseAdmin.from("administrators").select("id").eq("user_id", existingAuthUser.id).maybeSingle(),
+          supabaseAdmin.from("drivers").select("id").eq("user_id", existingAuthUser.id).maybeSingle(),
+          supabaseAdmin.from("client_users").select("id").eq("user_id", existingAuthUser.id).maybeSingle(),
+        ]);
+
+        if (adminCheck.data || driverCheck.data || clientCheck.data) {
+          return new Response(
+            JSON.stringify({ error: "Este correo ya está registrado en el sistema con otro rol (administrador, conductor o usuario de cliente)" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Orphaned account - reuse it, update password
+        console.log(`Reusing orphaned auth account for: ${email}`);
+        await supabaseAdmin.auth.admin.updateUserById(existingAuthUser.id, { password });
+        authUserId = existingAuthUser.id;
+      } else {
+        console.error("Error creating auth user:", createAuthError);
+        return new Response(
+          JSON.stringify({ error: createAuthError.message }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else {
+      authUserId = authData.user.id;
     }
 
     // Add to supervisors table
     const { error: supervisorError } = await supabaseAdmin
       .from("supervisors")
       .insert({
-        user_id: authData.user.id,
+        user_id: authUserId,
         email: email,
         name: name
       });
@@ -113,7 +138,7 @@ serve(async (req) => {
     if (supervisorError) {
       console.error("Error adding to supervisors:", supervisorError);
       // Rollback: delete the auth user if we can't add them as supervisor
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+      await supabaseAdmin.auth.admin.deleteUser(authUserId);
       return new Response(
         JSON.stringify({ error: supervisorError.message }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -126,7 +151,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         message: "Supervisor creado exitosamente",
-        user_id: authData.user.id 
+        user_id: authUserId 
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
