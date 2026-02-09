@@ -437,18 +437,21 @@ Deno.serve(async (req) => {
       )
     }
     
-    // Check if user is administrator
-    const { data: isAdmin, error: adminError } = await supabaseAuth.rpc('is_administrator')
+    // Check if user is administrator or supervisor
+    const [{ data: isAdmin }, { data: isSupervisor }] = await Promise.all([
+      supabaseAuth.rpc('is_administrator'),
+      supabaseAuth.rpc('is_supervisor'),
+    ])
     
-    if (adminError || !isAdmin) {
-      console.log('User is not administrator:', claimsData.claims.sub)
+    if (!isAdmin && !isSupervisor) {
+      console.log('User is not administrator or supervisor:', claimsData.claims.sub)
       return new Response(
-        JSON.stringify({ error: 'Forbidden - Administrator access required' }),
+        JSON.stringify({ error: 'Forbidden - Administrator or Supervisor access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
     
-    console.log('Authenticated as administrator:', claimsData.claims.sub)
+    console.log('Authenticated as', isAdmin ? 'administrator' : 'supervisor', ':', claimsData.claims.sub)
     // === END AUTHENTICATION CHECK ===
     
     // Get URL params for mode
