@@ -44,6 +44,7 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
   const [stops, setStops] = useState<KmlStop[]>([]);
   const [selectedStop, setSelectedStop] = useState<{ stop: KmlStop; index: number } | null>(null);
   const [userLocation, setUserLocation] = useState<google.maps.LatLngLiteral | null>(null);
+  const [selectedUnit, setSelectedUnit] = useState<AnimatedPosition | null>(null);
   const [animatedPositions, setAnimatedPositions] = useState<Map<string, AnimatedPosition>>(new Map());
   const mapRef = useRef<google.maps.Map | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -344,6 +345,7 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
           key={animPos.unitId}
           position={animPos.current}
           title={animPos.plateNumber}
+          onClick={() => setSelectedUnit(animPos)}
           icon={{
             url: '/images/bus-icon.png',
             scaledSize: new google.maps.Size(40, 40),
@@ -351,6 +353,18 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
           }}
         />
       ))}
+
+      {/* Unit InfoWindow */}
+      {selectedUnit && (
+        <InfoWindow
+          position={selectedUnit.current}
+          onCloseClick={() => setSelectedUnit(null)}
+        >
+          <div className="p-2 min-w-[120px]">
+            <p className="font-semibold text-sm text-gray-800">{selectedUnit.plateNumber}</p>
+          </div>
+        </InfoWindow>
+      )}
     </GoogleMap>
   );
 };
