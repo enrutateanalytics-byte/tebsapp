@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { GoogleMap, Marker, Polyline, InfoWindow } from '@react-google-maps/api';
 import { supabase } from '@/integrations/supabase/client';
 import { stringToCoordinates, stringToStops, KmlStop } from '@/lib/kmlParser';
+import { toast } from 'sonner';
 
 interface RouteData {
   id: string;
@@ -87,6 +88,26 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
     const routeStops = stringToStops(route?.stops);
     setStops(routeStops);
   }, [route?.kml_file_path, route?.stops]);
+
+  // Auto-sync GPS from Tracksolid when route is selected
+  useEffect(() => {
+    if (!route?.id) return;
+
+    const syncGps = async () => {
+      try {
+        await supabase.functions.invoke('sync-tracksolid', { method: 'POST' });
+      } catch (err) {
+        console.error('Auto-sync error:', err);
+      }
+    };
+
+    // Sync immediately on route select
+    syncGps();
+
+    // Then every 15 seconds
+    const intervalId = setInterval(syncGps, 15000);
+    return () => clearInterval(intervalId);
+  }, [route?.id]);
 
   // Get assignments ONLY for the selected route
   const { data: assignments } = useQuery({
