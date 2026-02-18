@@ -24,7 +24,7 @@ const Index = () => {
                 <MapPin className="h-6 w-6 text-primary" />
               </div>
               <div className="text-left">
-                <h2 className="text-lg font-semibold text-foreground">Seguimiento de Rutas</h2>
+                <h2 className="text-lg font-semibold text-foreground">APP</h2>
                 <p className="text-sm text-muted-foreground">Consulta el estado de las rutas en tiempo real</p>
               </div>
             </CardContent>
