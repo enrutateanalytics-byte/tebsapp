@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { MapPin, Shield } from 'lucide-react';
-import tebsaLogo from '@/assets/tebsa-logo-transparent.png';
+import tebsaLogo from '@/assets/tebsa-eagle-logo.png';
 
 const Index = () => {
   const navigate = useNavigate();
