@@ -10,7 +10,7 @@ const Index = () => {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4">
       <div className="w-full max-w-md space-y-8 text-center">
         <div className="space-y-4">
-          <img src={tebsaLogo} alt="TEBSA" className="mx-auto w-28 h-28 object-contain" />
+          <img src={tebsaLogo} alt="TEBSA" className="mx-auto w-28 h-28 object-contain drop-shadow-lg" />
           <h1 className="text-2xl font-bold text-foreground">Sistema de Transporte de Personal</h1>
         </div>
 
