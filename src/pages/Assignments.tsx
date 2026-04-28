@@ -178,7 +178,7 @@ const Assignments = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('assignments').delete().eq('id', id);
+      const { error } = await supabase.rpc('delete_assignment_safely', { p_id: id });
       if (error) throw error;
     },
     onSuccess: () => {
