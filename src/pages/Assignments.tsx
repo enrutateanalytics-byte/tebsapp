@@ -146,6 +146,9 @@ const Assignments = () => {
     },
   });
 
+  const isDuplicateError = (error: { message?: string; code?: string }) =>
+    error.code === '23505' || error.message?.includes('uniq_assignment_date_route_unit');
+
   const createMutation = useMutation({
     mutationFn: async (assignment: Omit<Assignment, 'id' | 'routes' | 'units' | 'drivers'>) => {
       const { error } = await supabase.from('assignments').insert(assignment);
@@ -156,7 +159,13 @@ const Assignments = () => {
       toast.success('Asignación creada correctamente');
       setOpen(false);
     },
-    onError: (error) => toast.error('Error: ' + error.message),
+    onError: (error: { message?: string; code?: string }) => {
+      if (isDuplicateError(error)) {
+        toast.error('Ya existe una asignación para esa ruta y unidad en la misma fecha');
+      } else {
+        toast.error('Error: ' + (error.message ?? ''));
+      }
+    },
   });
 
   const updateMutation = useMutation({
@@ -173,7 +182,13 @@ const Assignments = () => {
       setOpen(false);
       setEditingAssignment(null);
     },
-    onError: (error) => toast.error('Error: ' + error.message),
+    onError: (error: { message?: string; code?: string }) => {
+      if (isDuplicateError(error)) {
+        toast.error('Ya existe una asignación para esa ruta y unidad en la misma fecha');
+      } else {
+        toast.error('Error: ' + (error.message ?? ''));
+      }
+    },
   });
 
   const deleteMutation = useMutation({
