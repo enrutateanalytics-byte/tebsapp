@@ -628,6 +628,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_assignment_safely: { Args: { p_id: string }; Returns: boolean }
       driver_can_access_assignment: {
         Args: { assignment_unit_id: string }
         Returns: boolean
