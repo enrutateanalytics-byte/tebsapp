@@ -148,10 +148,10 @@ const Routes = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      const result = parseKmlFile(content);
+    const content = await file.text();
+
+    const processContent = (kml: string) => {
+      const result = parseKmlFile(kml);
       if (result.coordinates.length > 0 || result.stops.length > 0) {
         setTempCoordinates(result.coordinates);
         setTempStops(result.stops);
@@ -159,11 +159,33 @@ const Routes = () => {
         if (result.coordinates.length > 0) messages.push(`${result.coordinates.length} puntos de ruta`);
         if (result.stops.length > 0) messages.push(`${result.stops.length} paradas`);
         toast.success(`Cargados: ${messages.join(', ')}`);
-      } else {
-        toast.error('No se encontraron coordenadas en el archivo KML');
+        return true;
       }
+      return false;
     };
-    reader.readAsText(file);
+
+    // If KML has no geometry but has a NetworkLink, resolve it via edge function
+    if (!hasGeometry(content) && extractNetworkLinkHref(content)) {
+      const href = extractNetworkLinkHref(content)!;
+      const loadingId = toast.loading('Descargando KML referenciado...');
+      try {
+        const { data, error } = await supabase.functions.invoke('resolve-kml', {
+          body: { url: href },
+        });
+        toast.dismiss(loadingId);
+        if (error) throw error;
+        if (data?.kml && processContent(data.kml)) return;
+        toast.error('No se encontraron coordenadas en el KML referenciado');
+      } catch (err) {
+        toast.dismiss(loadingId);
+        toast.error('Error al descargar KML: ' + (err as Error).message);
+      }
+      return;
+    }
+
+    if (!processContent(content)) {
+      toast.error('No se encontraron coordenadas en el archivo KML');
+    }
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
