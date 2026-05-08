@@ -34,7 +34,7 @@ import { Plus, Pencil, Trash2, Route as RouteIcon, Map, Upload, Search } from 'l
 import GoogleMapsProvider from '@/components/maps/GoogleMapsProvider';
 import RouteMap from '@/components/maps/RouteMap';
 import BulkRouteUpload from '@/components/routes/BulkRouteUpload';
-import { parseKmlFile, stringToCoordinates, coordinatesToString, stringToStops, stopsToString, KmlStop } from '@/lib/kmlParser';
+import { parseKmlFile, stringToCoordinates, coordinatesToString, stringToStops, stopsToString, KmlStop, hasGeometry, extractNetworkLinkHref } from '@/lib/kmlParser';
 
 interface RouteData {
   id: string;
