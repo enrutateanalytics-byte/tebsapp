@@ -14,6 +14,15 @@ export interface KmlParseResult {
   stops: KmlStop[];
 }
 
+export const extractNetworkLinkHref = (kmlContent: string): string | null => {
+  const match = kmlContent.match(/<NetworkLink[\s\S]*?<href>\s*(?:<!\[CDATA\[)?\s*([^<\]]+?)\s*(?:\]\]>)?\s*<\/href>/i);
+  return match ? match[1].trim() : null;
+};
+
+export const hasGeometry = (kmlContent: string): boolean => {
+  return /<Point\b|<LineString\b|<Polygon\b/i.test(kmlContent);
+};
+
 export const parseKmlFile = (kmlContent: string): KmlParseResult => {
   const parser = new DOMParser();
   const doc = parser.parseFromString(kmlContent, 'text/xml');
