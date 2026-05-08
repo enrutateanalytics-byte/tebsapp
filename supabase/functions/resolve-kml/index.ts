@@ -22,7 +22,13 @@ Deno.serve(async (req) => {
     let kml = '';
     for (let i = 0; i < 3; i++) {
       console.log(`Fetching KML (iteration ${i}): ${currentUrl}`);
-      const res = await fetch(currentUrl, { redirect: 'follow' });
+      const res = await fetch(currentUrl, {
+        redirect: 'follow',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'application/vnd.google-earth.kml+xml, application/xml, text/xml, */*',
+        },
+      });
       if (!res.ok) {
         return new Response(
           JSON.stringify({ error: `Error descargando KML: ${res.status}` }),
