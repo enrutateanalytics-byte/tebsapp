@@ -1,8 +1,12 @@
-import { corsHeaders } from '@supabase/supabase-js/cors';
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
@@ -14,10 +18,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Follow up to 3 NetworkLinks
     let currentUrl = url;
     let kml = '';
     for (let i = 0; i < 3; i++) {
+      console.log(`Fetching KML (iteration ${i}): ${currentUrl}`);
       const res = await fetch(currentUrl, { redirect: 'follow' });
       if (!res.ok) {
         return new Response(
@@ -27,10 +31,8 @@ Deno.serve(async (req) => {
       }
       kml = await res.text();
 
-      // If it contains a Point/LineString, we're done
       if (/<Point\b|<LineString\b|<Polygon\b/i.test(kml)) break;
 
-      // Try to find another NetworkLink href to follow
       const hrefMatch = kml.match(/<NetworkLink[\s\S]*?<href>\s*(?:<!\[CDATA\[)?\s*([^<\]]+?)\s*(?:\]\]>)?\s*<\/href>/i);
       if (!hrefMatch) break;
       currentUrl = hrefMatch[1].trim();
@@ -40,6 +42,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
+    console.error('Error:', e);
     return new Response(JSON.stringify({ error: (e as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
