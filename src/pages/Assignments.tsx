@@ -313,7 +313,7 @@ const Assignments = () => {
     }
 
     return result;
-  }, [assignments, searchQuery, shiftFilter, clientFilter, timeRangeFilter]);
+  }, [assignments, searchQuery, shiftFilter, clientFilter]);
 
   // Mobile card view component
   const AssignmentCard = ({ assignment }: { assignment: Assignment }) => {
