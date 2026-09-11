@@ -538,19 +538,6 @@ const Assignments = () => {
             ))}
           </SelectContent>
         </Select>
-        <Select value={timeRangeFilter} onValueChange={setTimeRangeFilter}>
-          <SelectTrigger className="w-full lg:w-48">
-            <SelectValue placeholder="Todos los horarios" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">Todos los horarios</SelectItem>
-            {timeRangeOptions.map((range) => (
-              <SelectItem key={range.key} value={range.key}>
-                {getTimeRangeLabel(range.start, range.end)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
         <SearchableSelect
           options={[
             { value: '__all__', label: 'Todos los clientes' },
