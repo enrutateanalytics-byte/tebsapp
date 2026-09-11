@@ -150,7 +150,8 @@ const Units = () => {
       unit.plate_number.toLowerCase().includes(query) ||
       unit.brand?.toLowerCase().includes(query) ||
       unit.model?.toLowerCase().includes(query) ||
-      unit.driver_name?.toLowerCase().includes(query)
+      unit.driver_name?.toLowerCase().includes(query) ||
+      unit.imei?.toLowerCase().includes(query)
     );
   }, [units, searchQuery]);
 
@@ -377,7 +378,7 @@ const Units = () => {
       <div className="relative w-full sm:max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Buscar unidades..."
+          placeholder="Buscar por placa, marca, conductor o IMEI..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-9"
