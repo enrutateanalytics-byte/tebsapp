@@ -286,23 +286,6 @@ const Assignments = () => {
     setOpen(true);
   };
 
-  const timeRangeOptions = useMemo(() => {
-    if (!assignments) return [];
-    const ranges = new Map<string, { start: string | null; end: string | null }>();
-    assignments.forEach((assignment) => {
-      const key = getTimeRangeKey(assignment.start_time, assignment.end_time);
-      if (!ranges.has(key)) {
-        ranges.set(key, { start: assignment.start_time, end: assignment.end_time });
-      }
-    });
-    return Array.from(ranges.entries())
-      .map(([key, value]) => ({ key, ...value }))
-      .sort((a, b) => {
-        if (a.key === 'full') return 1;
-        if (b.key === 'full') return -1;
-        return a.key.localeCompare(b.key);
-      });
-  }, [assignments]);
 
   const filteredAssignments = useMemo(() => {
     if (!assignments) return assignments;
@@ -317,12 +300,6 @@ const Assignments = () => {
     if (clientFilter !== '__all__') {
       result = result.filter((assignment) =>
         assignment.routes?.client_id === clientFilter
-      );
-    }
-
-    if (timeRangeFilter !== '__all__') {
-      result = result.filter((assignment) =>
-        getTimeRangeKey(assignment.start_time, assignment.end_time) === timeRangeFilter
       );
     }
 
