@@ -7,6 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Table,
@@ -63,9 +70,18 @@ interface Assignment {
   start_time: string | null;
   end_time: string | null;
   notes: string | null;
-  routes?: { name: string } | null;
+  routes?: {
+    name: string;
+    client_id: string | null;
+    clients?: { name: string } | null;
+  } | null;
   units?: { plate_number: string; driver_name: string | null } | null;
   drivers?: { name: string } | null;
+}
+
+interface ClientOption {
+  id: string;
+  name: string;
 }
 
 interface RouteOption {
@@ -90,6 +106,8 @@ const Assignments = () => {
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
   const [selectedShift, setSelectedShift] = useState<ShiftId>('full');
   const [searchQuery, setSearchQuery] = useState('');
+  const [shiftFilter, setShiftFilter] = useState<ShiftId | '__all__'>('__all__');
+  const [clientFilter, setClientFilter] = useState<string>('__all__');
   const [selectedRouteId, setSelectedRouteId] = useState<string>('');
   const [selectedUnitId, setSelectedUnitId] = useState<string>('');
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
@@ -100,7 +118,7 @@ const Assignments = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('assignments')
-        .select('*, routes(name), units(plate_number, driver_name), drivers!assignments_driver_id_fkey(name)')
+        .select('*, routes!inner(name, client_id, clients(name)), units(plate_number, driver_name), drivers!assignments_driver_id_fkey(name)')
         .order('assignment_date', { ascending: false });
       if (error) throw error;
       return data as unknown as Assignment[];
@@ -143,6 +161,18 @@ const Assignments = () => {
         .order('name');
       if (error) throw error;
       return data as DriverOption[];
+    },
+  });
+
+  const { data: clients } = useQuery({
+    queryKey: ['clients-options'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('id, name')
+        .order('name');
+      if (error) throw error;
+      return data as ClientOption[];
     },
   });
 
@@ -252,14 +282,32 @@ const Assignments = () => {
   };
 
   const filteredAssignments = useMemo(() => {
-    if (!assignments || !searchQuery.trim()) return assignments;
-    const query = searchQuery.toLowerCase();
-    return assignments.filter((assignment) =>
-      assignment.routes?.name?.toLowerCase().includes(query) ||
-      assignment.units?.plate_number?.toLowerCase().includes(query) ||
-      assignment.units?.driver_name?.toLowerCase().includes(query)
-    );
-  }, [assignments, searchQuery]);
+    if (!assignments) return assignments;
+    let result = assignments;
+
+    if (shiftFilter !== '__all__') {
+      result = result.filter((assignment) =>
+        getShiftFromTimes(assignment.start_time, assignment.end_time) === shiftFilter
+      );
+    }
+
+    if (clientFilter !== '__all__') {
+      result = result.filter((assignment) =>
+        assignment.routes?.client_id === clientFilter
+      );
+    }
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter((assignment) =>
+        assignment.routes?.name?.toLowerCase().includes(query) ||
+        assignment.units?.plate_number?.toLowerCase().includes(query) ||
+        assignment.units?.driver_name?.toLowerCase().includes(query)
+      );
+    }
+
+    return result;
+  }, [assignments, searchQuery, shiftFilter, clientFilter]);
 
   // Mobile card view component
   const AssignmentCard = ({ assignment }: { assignment: Assignment }) => {
@@ -290,6 +338,11 @@ const Assignments = () => {
                 <Route className="w-4 h-4 text-muted-foreground shrink-0" />
                 <span className="font-medium truncate">{assignment.routes?.name || '-'}</span>
               </div>
+              {assignment.routes?.clients?.name && (
+                <div className="text-xs text-muted-foreground mb-1 truncate">
+                  {assignment.routes.clients.name}
+                </div>
+              )}
               
               {/* Unit */}
               <div className="flex items-center gap-2 mb-1">
@@ -457,14 +510,39 @@ const Assignments = () => {
         </Dialog>
       </div>
 
-      {/* Search */}
-      <div className="relative w-full sm:max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar asignaciones..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
+      {/* Filters */}
+      <div className="flex flex-col lg:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar ruta, unidad o conductor..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={shiftFilter} onValueChange={(value) => setShiftFilter(value as ShiftId | '__all__')}>
+          <SelectTrigger className="w-full lg:w-48">
+            <SelectValue placeholder="Todos los turnos" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Todos los turnos</SelectItem>
+            {SHIFTS.map((shift) => (
+              <SelectItem key={shift.id} value={shift.id}>{shift.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <SearchableSelect
+          options={[
+            { value: '__all__', label: 'Todos los clientes' },
+            ...(clients?.map((client) => ({ value: client.id, label: client.name })) || []),
+          ]}
+          value={clientFilter}
+          onValueChange={setClientFilter}
+          placeholder="Todos los clientes"
+          searchPlaceholder="Buscar cliente..."
+          emptyMessage="No se encontraron clientes."
+          className="w-full lg:w-64"
         />
       </div>
 
@@ -493,6 +571,7 @@ const Assignments = () => {
                 <TableRow>
                   <TableHead>Turno</TableHead>
                   <TableHead>Ruta</TableHead>
+                  <TableHead>Cliente</TableHead>
                   <TableHead>Unidad</TableHead>
                   <TableHead>Conductor</TableHead>
                   <TableHead className="w-24">Acciones</TableHead>
@@ -510,6 +589,7 @@ const Assignments = () => {
                       )}
                     </TableCell>
                     <TableCell>{assignment.routes?.name || '-'}</TableCell>
+                    <TableCell>{assignment.routes?.clients?.name || '-'}</TableCell>
                     <TableCell>{assignment.units?.plate_number || '-'}</TableCell>
                     <TableCell>
                       {assignment.drivers?.name || (
