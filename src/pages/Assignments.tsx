@@ -43,9 +43,13 @@ const SHIFTS = [
 
 type ShiftId = typeof SHIFTS[number]['id'];
 
+const normalizeTime = (t: string | null) => (t ? t.slice(0, 5) : null);
+
 const getShiftFromTimes = (start: string | null, end: string | null): ShiftId => {
-  if (!start && !end) return 'full';
-  const shift = SHIFTS.find(s => s.start === start && s.end === end);
+  const s = normalizeTime(start);
+  const e = normalizeTime(end);
+  if (!s && !e) return 'full';
+  const shift = SHIFTS.find(sh => sh.start === s && sh.end === e);
   return shift?.id || 'full';
 };
 
