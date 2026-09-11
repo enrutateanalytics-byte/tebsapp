@@ -65,15 +65,6 @@ const getShiftIcon = (start: string | null, end: string | null) => {
   return shift?.icon || CalendarClock;
 };
 
-const getTimeRangeKey = (start: string | null, end: string | null): string => {
-  if (!start && !end) return 'full';
-  return `${start?.slice(0, 5)}-${end?.slice(0, 5)}`;
-};
-
-const getTimeRangeLabel = (start: string | null, end: string | null): string => {
-  if (!start && !end) return 'Turno Completo';
-  return `${start?.slice(0, 5)} - ${end?.slice(0, 5)}`;
-};
 
 interface Assignment {
   id: string;
@@ -122,7 +113,6 @@ const Assignments = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [shiftFilter, setShiftFilter] = useState<ShiftId | '__all__'>('__all__');
   const [clientFilter, setClientFilter] = useState<string>('__all__');
-  const [timeRangeFilter, setTimeRangeFilter] = useState<string>('__all__');
   const [selectedRouteId, setSelectedRouteId] = useState<string>('');
   const [selectedUnitId, setSelectedUnitId] = useState<string>('');
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
