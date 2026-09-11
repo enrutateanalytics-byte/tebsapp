@@ -65,15 +65,6 @@ const getShiftIcon = (start: string | null, end: string | null) => {
   return shift?.icon || CalendarClock;
 };
 
-const getTimeRangeKey = (start: string | null, end: string | null): string => {
-  if (!start && !end) return 'full';
-  return `${start?.slice(0, 5)}-${end?.slice(0, 5)}`;
-};
-
-const getTimeRangeLabel = (start: string | null, end: string | null): string => {
-  if (!start && !end) return 'Turno Completo';
-  return `${start?.slice(0, 5)} - ${end?.slice(0, 5)}`;
-};
 
 interface Assignment {
   id: string;
@@ -122,7 +113,6 @@ const Assignments = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [shiftFilter, setShiftFilter] = useState<ShiftId | '__all__'>('__all__');
   const [clientFilter, setClientFilter] = useState<string>('__all__');
-  const [timeRangeFilter, setTimeRangeFilter] = useState<string>('__all__');
   const [selectedRouteId, setSelectedRouteId] = useState<string>('');
   const [selectedUnitId, setSelectedUnitId] = useState<string>('');
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
@@ -296,23 +286,6 @@ const Assignments = () => {
     setOpen(true);
   };
 
-  const timeRangeOptions = useMemo(() => {
-    if (!assignments) return [];
-    const ranges = new Map<string, { start: string | null; end: string | null }>();
-    assignments.forEach((assignment) => {
-      const key = getTimeRangeKey(assignment.start_time, assignment.end_time);
-      if (!ranges.has(key)) {
-        ranges.set(key, { start: assignment.start_time, end: assignment.end_time });
-      }
-    });
-    return Array.from(ranges.entries())
-      .map(([key, value]) => ({ key, ...value }))
-      .sort((a, b) => {
-        if (a.key === 'full') return 1;
-        if (b.key === 'full') return -1;
-        return a.key.localeCompare(b.key);
-      });
-  }, [assignments]);
 
   const filteredAssignments = useMemo(() => {
     if (!assignments) return assignments;
@@ -330,12 +303,6 @@ const Assignments = () => {
       );
     }
 
-    if (timeRangeFilter !== '__all__') {
-      result = result.filter((assignment) =>
-        getTimeRangeKey(assignment.start_time, assignment.end_time) === timeRangeFilter
-      );
-    }
-
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter((assignment) =>
@@ -346,7 +313,7 @@ const Assignments = () => {
     }
 
     return result;
-  }, [assignments, searchQuery, shiftFilter, clientFilter, timeRangeFilter]);
+  }, [assignments, searchQuery, shiftFilter, clientFilter]);
 
   // Mobile card view component
   const AssignmentCard = ({ assignment }: { assignment: Assignment }) => {
@@ -568,19 +535,6 @@ const Assignments = () => {
             <SelectItem value="__all__">Todos los turnos</SelectItem>
             {SHIFTS.map((shift) => (
               <SelectItem key={shift.id} value={shift.id}>{shift.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={timeRangeFilter} onValueChange={setTimeRangeFilter}>
-          <SelectTrigger className="w-full lg:w-48">
-            <SelectValue placeholder="Todos los horarios" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">Todos los horarios</SelectItem>
-            {timeRangeOptions.map((range) => (
-              <SelectItem key={range.key} value={range.key}>
-                {getTimeRangeLabel(range.start, range.end)}
-              </SelectItem>
             ))}
           </SelectContent>
         </Select>
