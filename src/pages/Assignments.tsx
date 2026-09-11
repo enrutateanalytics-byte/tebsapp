@@ -170,7 +170,6 @@ const Assignments = () => {
       const { data, error } = await supabase
         .from('clients')
         .select('id, name')
-        .eq('is_active', true)
         .order('name');
       if (error) throw error;
       return data as ClientOption[];
