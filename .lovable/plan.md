@@ -1,48 +1,29 @@
-## Problema
+# Agregar búsqueda por IMEI en el menú de Unidades
 
-Al intentar eliminar una asignación en `/assignments`, aparece el error:
+## Objetivo
+Permitir que el campo de búsqueda en `/units` filtre unidades no solo por placa, marca, modelo y conductor, sino también por IMEI.
 
-> Error: canceling statement due to statement timeout
+## Cambios
 
-**Causa raíz:** La tabla `gps_positions` contiene **16,838,455 registros** y su columna `assignment_id` **no tiene índice**. Cuando se ejecuta el `DELETE` sobre `assignments`, Postgres realiza operaciones (validaciones / consultas relacionadas) que escanean toda esa tabla, superando el límite de tiempo permitido (~8 segundos en Supabase).
+### 1. Actualizar `src/pages/Units.tsx`
 
-## Solución
+En la función `filteredUnits`, agregar `unit.imei` como campo de búsqueda:
 
-### 1. Crear índice en `gps_positions.assignment_id` (migración)
-
-Esto hace que cualquier consulta o validación que involucre `assignment_id` sea casi instantánea, en lugar de escanear millones de filas.
-
-```sql
-CREATE INDEX IF NOT EXISTS idx_gps_positions_assignment_id
-  ON public.gps_positions (assignment_id);
+```text
+filteredUnits = units.filter(unit =>
+  unit.plate_number.toLowerCase().includes(query) ||
+  unit.brand?.toLowerCase().includes(query) ||
+  unit.model?.toLowerCase().includes(query) ||
+  unit.driver_name?.toLowerCase().includes(query) ||
+  unit.imei?.toLowerCase().includes(query)
+)
 ```
 
-### 2. Crear una función RPC `delete_assignment_safely` (migración)
+### 2. Actualizar placeholder del campo de búsqueda
 
-Una función `SECURITY DEFINER` que:
-- Verifica que el usuario sea administrador (o supervisor con permiso sobre el cliente de la ruta).
-- Primero hace `UPDATE gps_positions SET assignment_id = NULL WHERE assignment_id = $1` (rápido gracias al nuevo índice). Esto preserva el histórico GPS pero lo desvincula.
-- Luego hace `DELETE FROM assignments WHERE id = $1`.
-- Devuelve `true` en éxito.
+Cambiar el placeholder actual de "Buscar unidades..." a "Buscar por placa, marca, conductor o IMEI..." para que el usuario sepa que puede buscar por IMEI.
 
-De esta manera el borrado se vuelve atómico, rápido y no se pierden datos GPS históricos (solo dejan de estar asociados a la asignación borrada).
-
-### 3. Actualizar el frontend (`src/pages/Assignments.tsx`)
-
-Cambiar el `deleteMutation` para llamar a la nueva función RPC en lugar de `.delete()` directo:
-
-```ts
-const { error } = await supabase.rpc('delete_assignment_safely', { p_id: id });
-```
-
-## Resultado esperado
-
-- El botón "Eliminar" en `/assignments` funciona correctamente, tanto en la vista móvil como en la de escritorio.
-- Las posiciones GPS históricas se conservan en la base de datos (con `assignment_id = NULL`), de modo que no se pierde información operativa pasada.
-- Cualquier consulta futura que filtre `gps_positions` por `assignment_id` también se beneficiará del nuevo índice.
-
-## Notas técnicas
-
-- El índice se crea con `IF NOT EXISTS` para que sea idempotente.
-- La función RPC respetará los mismos permisos que las políticas RLS actuales (admin o supervisor del cliente correspondiente).
-- No se elimina ni modifica ninguna otra política de seguridad.
+## Detalles técnicos
+- No se requieren cambios en la base de datos ni en el backend.
+- El filtrado es puramente en el cliente, usando los datos ya cargados por `useQuery`.
+- Se mantiene el comportamiento existente de búsqueda insensible a mayúsculas/minúsculas.
