@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LogOut, MapPin, Navigation, Clock } from 'lucide-react';
+import { LogOut, MapPin, Navigation } from 'lucide-react';
 import tebsaLogo from '@/assets/tebsa-logo.png';
 import GoogleMapsProvider from '@/components/maps/GoogleMapsProvider';
 import PublicCombinedMap from '@/components/public/PublicCombinedMap';
