@@ -229,15 +229,19 @@ const Routes = () => {
   };
 
   const filteredRoutes = useMemo(() => {
-    if (!routes || !searchQuery.trim()) return routes;
+    let result = routes;
+    if (clientFilter !== '__all__') {
+      result = result?.filter((route) => route.client_id === clientFilter);
+    }
+    if (!result || !searchQuery.trim()) return result;
     const query = searchQuery.toLowerCase();
-    return routes.filter((route) =>
+    return result.filter((route) =>
       route.name.toLowerCase().includes(query) ||
       route.clients?.name?.toLowerCase().includes(query) ||
       route.origin_address?.toLowerCase().includes(query) ||
       route.destination_address?.toLowerCase().includes(query)
     );
-  }, [routes, searchQuery]);
+  }, [routes, searchQuery, clientFilter]);
 
   return (
     <div className="space-y-6">
