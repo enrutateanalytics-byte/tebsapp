@@ -244,18 +244,18 @@ const PublicApp = () => {
                 </button>
                 {availableShifts.map((shift) => (
                   <button
-                    key={shift}
+                    key={shift.id}
                     onClick={() => {
-                      setShiftFilter(shift);
+                      setShiftFilter(shift.id);
                       setSelectedRoute(null);
                     }}
                     className={`shrink-0 h-8 px-3 rounded-full text-xs font-semibold transition-colors ${
-                      shiftFilter === shift
+                      shiftFilter === shift.id
                         ? 'bg-primary text-primary-foreground shadow'
                         : 'text-muted-foreground hover:bg-muted'
                     }`}
                   >
-                    Turno {shift}
+                    {shift.name}
                   </button>
                 ))}
               </div>
