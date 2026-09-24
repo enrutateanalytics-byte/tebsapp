@@ -35,9 +35,9 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, CalendarClock, Search, Sun, Sunset, Moon, Bus, Route, UserCog } from 'lucide-react';
 
 const SHIFTS = [
-  { id: 'morning', name: 'Mañana', start: '06:00', end: '14:00', icon: Sun },
-  { id: 'afternoon', name: 'Tarde', start: '14:00', end: '22:00', icon: Sunset },
-  { id: 'night', name: 'Noche', start: '22:00', end: '06:00', icon: Moon },
+  { id: 'morning', name: 'Turno Mañana', start: '06:00', end: '14:00', icon: Sun },
+  { id: 'afternoon', name: 'Turno Tarde', start: '14:00', end: '22:00', icon: Sunset },
+  { id: 'night', name: 'Turno Noche', start: '22:00', end: '06:00', icon: Moon },
   { id: 'full', name: 'Turno Completo', start: null, end: null, icon: CalendarClock },
 ] as const;
 
