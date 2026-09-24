@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Bus, RefreshCw } from 'lucide-react';
 import GoogleMapsProvider from '@/components/maps/GoogleMapsProvider';
 import { GoogleMap, Marker } from '@react-google-maps/api';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
 interface GpsPosition {
@@ -27,7 +27,26 @@ const containerStyle = {
 
 const Tracking = () => {
   const [isSyncing, setIsSyncing] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const queryClient = useQueryClient();
+
+  // Get user's device location on mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.log('Geolocation error:', error.message);
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+  }, []);
 
   const { data: positions, isLoading } = useQuery({
     queryKey: ['gps-positions'],
