@@ -122,6 +122,20 @@ const PublicApp = () => {
     enabled: !!clientUser?.client_id,
   });
 
+  // Available shifts based on the client's routes
+  const availableShifts = useMemo(() => {
+    const set = new Set<string>();
+    routes?.forEach((r) => getRouteShifts(r.name).forEach((s) => set.add(s)));
+    return Array.from(set).sort();
+  }, [routes]);
+
+  // Routes filtered by the selected shift
+  const filteredRoutes = useMemo(() => {
+    if (shiftFilter === '__all__') return routes ?? [];
+    return (routes ?? []).filter((r) => getRouteShifts(r.name).includes(shiftFilter));
+  }, [routes, shiftFilter]);
+
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/public-login');
