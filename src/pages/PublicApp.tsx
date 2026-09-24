@@ -36,9 +36,9 @@ interface ClientUserData {
 
 // Same shifts used when creating an assignment
 const SHIFTS = [
-  { id: 'morning', name: 'Mañana', start: '06:00', end: '14:00' },
-  { id: 'afternoon', name: 'Tarde', start: '14:00', end: '22:00' },
-  { id: 'night', name: 'Noche', start: '22:00', end: '06:00' },
+  { id: 'morning', name: 'Turno Mañana', start: '06:00', end: '14:00' },
+  { id: 'afternoon', name: 'Turno Tarde', start: '14:00', end: '22:00' },
+  { id: 'night', name: 'Turno Noche', start: '22:00', end: '06:00' },
   { id: 'full', name: 'Turno Completo', start: null, end: null },
 ] as const;
 
