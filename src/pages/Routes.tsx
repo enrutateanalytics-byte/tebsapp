@@ -31,6 +31,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Route as RouteIcon, Map, Upload, Search } from 'lucide-react';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import GoogleMapsProvider from '@/components/maps/GoogleMapsProvider';
 import RouteMap from '@/components/maps/RouteMap';
 import BulkRouteUpload from '@/components/routes/BulkRouteUpload';
@@ -66,6 +67,7 @@ const Routes = () => {
   const [tempCoordinates, setTempCoordinates] = useState<{ lat: number; lng: number }[]>([]);
   const [tempStops, setTempStops] = useState<KmlStop[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [clientFilter, setClientFilter] = useState<string>('__all__');
   const queryClient = useQueryClient();
 
   const { data: routes, isLoading } = useQuery({
