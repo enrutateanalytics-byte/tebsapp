@@ -34,11 +34,19 @@ interface ClientUserData {
   } | null;
 }
 
-// Extract the shift numbers mentioned in a route name, e.g. "TURNO 1,2,3,4 - ..." -> ["1","2","3","4"]
-const getRouteShifts = (name: string): string[] => {
-  const match = name.match(/turno\s*([\d\s,y]+)/i);
-  if (!match) return [];
-  return Array.from(new Set(match[1].match(/\d/g) || []));
+// Same shifts used when creating an assignment
+const SHIFTS = [
+  { id: 'morning', name: 'Mañana', start: '06:00', end: '14:00' },
+  { id: 'afternoon', name: 'Tarde', start: '14:00', end: '22:00' },
+  { id: 'night', name: 'Noche', start: '22:00', end: '06:00' },
+  { id: 'full', name: 'Turno Completo', start: null, end: null },
+] as const;
+
+const getShiftFromTimes = (start: string | null, end: string | null): string => {
+  const s = start ? start.slice(0, 5) : null;
+  const e = end ? end.slice(0, 5) : null;
+  if (!s && !e) return 'full';
+  return SHIFTS.find((sh) => sh.start === s && sh.end === e)?.id || 'full';
 };
 
 const PublicApp = () => {
@@ -122,18 +130,50 @@ const PublicApp = () => {
     enabled: !!clientUser?.client_id,
   });
 
-  // Available shifts based on the client's routes
+  // Fetch assignments (shift comes from the assignment's start/end time)
+  const { data: routeAssignments } = useQuery({
+    queryKey: ['public-route-assignments', clientUser?.client_id],
+    queryFn: async () => {
+      const ids = (routes ?? []).map((r) => r.id);
+      if (ids.length === 0) return [];
+      const { data, error } = await supabase
+        .from('assignments')
+        .select('route_id, start_time, end_time, assignment_date')
+        .in('route_id', ids)
+        .order('assignment_date', { ascending: false })
+        .limit(5000);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!routes && routes.length > 0,
+  });
+
+  // Map route_id -> set of shift ids (from its most recent assignment date)
+  const routeShiftMap = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    const latestDate = new Map<string, string>();
+    routeAssignments?.forEach((a: any) => {
+      const latest = latestDate.get(a.route_id);
+      if (latest && latest !== a.assignment_date) return;
+      latestDate.set(a.route_id, a.assignment_date);
+      if (!map.has(a.route_id)) map.set(a.route_id, new Set());
+      map.get(a.route_id)!.add(getShiftFromTimes(a.start_time, a.end_time));
+    });
+    return map;
+  }, [routeAssignments]);
+
+  // Available shifts based on assignments
   const availableShifts = useMemo(() => {
     const set = new Set<string>();
-    routes?.forEach((r) => getRouteShifts(r.name).forEach((s) => set.add(s)));
-    return Array.from(set).sort();
-  }, [routes]);
+    routeShiftMap.forEach((s) => s.forEach((id) => set.add(id)));
+    return SHIFTS.filter((s) => set.has(s.id));
+  }, [routeShiftMap]);
 
   // Routes filtered by the selected shift
   const filteredRoutes = useMemo(() => {
     if (shiftFilter === '__all__') return routes ?? [];
-    return (routes ?? []).filter((r) => getRouteShifts(r.name).includes(shiftFilter));
-  }, [routes, shiftFilter]);
+    return (routes ?? []).filter((r) => routeShiftMap.get(r.id)?.has(shiftFilter));
+  }, [routes, shiftFilter, routeShiftMap]);
 
 
   const handleLogout = async () => {
@@ -204,18 +244,18 @@ const PublicApp = () => {
                 </button>
                 {availableShifts.map((shift) => (
                   <button
-                    key={shift}
+                    key={shift.id}
                     onClick={() => {
-                      setShiftFilter(shift);
+                      setShiftFilter(shift.id);
                       setSelectedRoute(null);
                     }}
                     className={`shrink-0 h-8 px-3 rounded-full text-xs font-semibold transition-colors ${
-                      shiftFilter === shift
+                      shiftFilter === shift.id
                         ? 'bg-primary text-primary-foreground shadow'
                         : 'text-muted-foreground hover:bg-muted'
                     }`}
                   >
-                    Turno {shift}
+                    {shift.name}
                   </button>
                 ))}
               </div>
