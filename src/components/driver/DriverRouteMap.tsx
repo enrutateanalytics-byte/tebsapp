@@ -21,8 +21,8 @@ const containerStyle = {
 };
 
 const defaultCenter = {
-  lat: 19.4326,
-  lng: -99.1332,
+  lat: 32.5149,
+  lng: -117.0382,
 };
 
 const DriverRouteMap = ({ routeId, showDriverLocation = true }: DriverRouteMapProps) => {

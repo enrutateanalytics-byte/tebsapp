@@ -38,7 +38,7 @@ const containerStyle = {
   height: '100%',
 };
 
-const defaultCenter = { lat: 19.4326, lng: -99.1332 };
+const defaultCenter = { lat: 32.5149, lng: -117.0382 };
 
 const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
   const [routeCoordinates, setRouteCoordinates] = useState<google.maps.LatLngLiteral[]>([]);
