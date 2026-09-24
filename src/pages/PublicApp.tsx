@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LogOut, MapPin, Navigation } from 'lucide-react';
+import { LogOut, MapPin, Navigation, Clock } from 'lucide-react';
 import tebsaLogo from '@/assets/tebsa-logo.png';
 import GoogleMapsProvider from '@/components/maps/GoogleMapsProvider';
 import PublicCombinedMap from '@/components/public/PublicCombinedMap';
@@ -34,9 +34,17 @@ interface ClientUserData {
   } | null;
 }
 
+// Extract the shift numbers mentioned in a route name, e.g. "TURNO 1,2,3,4 - ..." -> ["1","2","3","4"]
+const getRouteShifts = (name: string): string[] => {
+  const match = name.match(/turno\s*([\d\s,y]+)/i);
+  if (!match) return [];
+  return Array.from(new Set(match[1].match(/\d/g) || []));
+};
+
 const PublicApp = () => {
   const navigate = useNavigate();
   const [selectedRoute, setSelectedRoute] = useState<RouteData | null>(null);
+  const [shiftFilter, setShiftFilter] = useState<string>('__all__');
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -114,6 +122,20 @@ const PublicApp = () => {
     enabled: !!clientUser?.client_id,
   });
 
+  // Available shifts based on the client's routes
+  const availableShifts = useMemo(() => {
+    const set = new Set<string>();
+    routes?.forEach((r) => getRouteShifts(r.name).forEach((s) => set.add(s)));
+    return Array.from(set).sort();
+  }, [routes]);
+
+  // Routes filtered by the selected shift
+  const filteredRoutes = useMemo(() => {
+    if (shiftFilter === '__all__') return routes ?? [];
+    return (routes ?? []).filter((r) => getRouteShifts(r.name).includes(shiftFilter));
+  }, [routes, shiftFilter]);
+
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/public-login');
@@ -161,12 +183,39 @@ const PublicApp = () => {
           <PublicCombinedMap route={selectedRoute} clientId={clientUser.client_id} />
         </GoogleMapsProvider>
 
-        {/* Floating Route Selector */}
-        <div className="absolute top-4 left-4 right-4 z-40 animate-fade-in">
+        {/* Floating Filters + Route Selector */}
+        <div className="absolute top-4 left-4 right-4 z-40 animate-fade-in space-y-2">
+          {/* Shift filter */}
+          <Select
+            value={shiftFilter}
+            onValueChange={(value) => {
+              setShiftFilter(value);
+              setSelectedRoute(null);
+            }}
+          >
+            <SelectTrigger className="w-full bg-card/95 backdrop-blur-sm shadow-xl border-0 h-11 rounded-xl">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-primary" />
+                </div>
+                <SelectValue placeholder="Todos los turnos" />
+              </div>
+            </SelectTrigger>
+            <SelectContent className="bg-card/95 backdrop-blur-sm border-0 shadow-xl rounded-xl z-50">
+              <SelectItem value="__all__" className="py-3 cursor-pointer">Todos los turnos</SelectItem>
+              {availableShifts.map((shift) => (
+                <SelectItem key={shift} value={shift} className="py-3 cursor-pointer">
+                  Turno {shift}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Route selector */}
           <Select
             value={selectedRoute?.id || ''}
             onValueChange={(value) => {
-              const route = routes?.find(r => r.id === value) || null;
+              const route = filteredRoutes.find(r => r.id === value) || null;
               setSelectedRoute(route);
             }}
           >
@@ -178,13 +227,13 @@ const PublicApp = () => {
                 <SelectValue placeholder="Seleccionar ruta..." />
               </div>
             </SelectTrigger>
-            <SelectContent className="bg-card/95 backdrop-blur-sm border-0 shadow-xl rounded-xl z-50">
+            <SelectContent className="bg-card/95 backdrop-blur-sm border-0 shadow-xl rounded-xl z-50 max-h-72">
               {routesLoading ? (
                 <SelectItem value="loading" disabled>Cargando rutas...</SelectItem>
-              ) : routes?.length === 0 ? (
+              ) : filteredRoutes.length === 0 ? (
                 <SelectItem value="empty" disabled>No hay rutas disponibles</SelectItem>
               ) : (
-                routes?.map((route) => (
+                filteredRoutes.map((route) => (
                   <SelectItem 
                     key={route.id} 
                     value={route.id}
@@ -205,6 +254,7 @@ const PublicApp = () => {
             </SelectContent>
           </Select>
         </div>
+
 
         {/* Floating QR Button - Bottom Right */}
         <div className="absolute bottom-6 right-4 z-40 animate-fade-in">
