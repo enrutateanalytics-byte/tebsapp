@@ -400,14 +400,28 @@ const Routes = () => {
         </DialogContent>
       </Dialog>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar rutas..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
-        />
+      <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar rutas..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="w-full sm:w-64">
+          <SearchableSelect
+            options={[
+              { value: '__all__', label: 'Todos los clientes' },
+              ...(clients?.map((c) => ({ value: c.id, label: c.name })) ?? []),
+            ]}
+            value={clientFilter}
+            onValueChange={setClientFilter}
+            placeholder="Filtrar por cliente"
+            searchPlaceholder="Buscar cliente..."
+          />
+        </div>
       </div>
 
       {isLoading ? (
