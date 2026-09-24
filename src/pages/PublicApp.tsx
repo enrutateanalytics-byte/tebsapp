@@ -34,9 +34,17 @@ interface ClientUserData {
   } | null;
 }
 
+// Extract the shift numbers mentioned in a route name, e.g. "TURNO 1,2,3,4 - ..." -> ["1","2","3","4"]
+const getRouteShifts = (name: string): string[] => {
+  const match = name.match(/turno\s*([\d\s,y]+)/i);
+  if (!match) return [];
+  return Array.from(new Set(match[1].match(/\d/g) || []));
+};
+
 const PublicApp = () => {
   const navigate = useNavigate();
   const [selectedRoute, setSelectedRoute] = useState<RouteData | null>(null);
+  const [shiftFilter, setShiftFilter] = useState<string>('__all__');
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
