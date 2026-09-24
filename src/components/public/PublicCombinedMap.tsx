@@ -50,6 +50,16 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
   const mapRef = useRef<google.maps.Map | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastPositionsRef = useRef<Map<string, google.maps.LatLngLiteral>>(new Map());
+  const centeredOnUserRef = useRef(false);
+
+  // Center map on user location (once map is ready and no route selected)
+  const centerOnUser = useCallback((location: google.maps.LatLngLiteral) => {
+    if (mapRef.current && !route && !centeredOnUserRef.current) {
+      centeredOnUserRef.current = true;
+      mapRef.current.setCenter(location);
+      mapRef.current.setZoom(14);
+    }
+  }, [route]);
 
   // Get user's device location on mount
   useEffect(() => {
@@ -61,11 +71,7 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
             lng: position.coords.longitude,
           };
           setUserLocation(location);
-          // Center map on user location if no route is selected
-          if (mapRef.current && !route) {
-            mapRef.current.setCenter(location);
-            mapRef.current.setZoom(14);
-          }
+          centerOnUser(location);
         },
         (error) => {
           console.log('Geolocation error:', error.message);
@@ -73,7 +79,7 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
         { enableHighAccuracy: true, timeout: 10000 }
       );
     }
-  }, []);
+  }, [centerOnUser]);
 
   // Parse route coordinates and stops from stored JSON
   useEffect(() => {
@@ -255,14 +261,20 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
   const handleMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
     
-    if (routeCoordinates.length === 0 && stops.length === 0 && (!positions || positions.length === 0)) return;
+    // Priority: center on user location when no route is selected
+    if (routeCoordinates.length === 0 && stops.length === 0) {
+      if (userLocation) {
+        centerOnUser(userLocation);
+      }
+      return;
+    }
     
     const bounds = new google.maps.LatLngBounds();
     routeCoordinates.forEach(coord => bounds.extend(coord));
     stops.forEach(stop => bounds.extend({ lat: stop.lat, lng: stop.lng }));
     positions?.forEach(pos => bounds.extend({ lat: Number(pos.latitude), lng: Number(pos.longitude) }));
     map.fitBounds(bounds, 50);
-  }, [routeCoordinates, stops, positions]);
+  }, [routeCoordinates, stops, positions, userLocation, centerOnUser]);
 
   // Convert animated positions map to array for rendering
   const animatedMarkersArray = useMemo(() => {
@@ -368,6 +380,25 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
           }}
         />
       ))}
+
+      {/* User location marker (blue dot) */}
+      {userLocation && (
+        <Marker
+          position={userLocation}
+          title="Tu ubicación"
+          zIndex={999}
+          icon={{
+            url: 'data:image/svg+xml,' + encodeURIComponent(`
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" fill="hsl(221, 83%, 53%)" fill-opacity="0.2"/>
+                <circle cx="12" cy="12" r="6" fill="hsl(221, 83%, 53%)" stroke="white" stroke-width="2"/>
+              </svg>
+            `),
+            scaledSize: new google.maps.Size(24, 24),
+            anchor: new google.maps.Point(12, 12),
+          }}
+        />
+      )}
 
       {/* Unit InfoWindow */}
       {selectedUnit && (
