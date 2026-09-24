@@ -50,6 +50,16 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
   const mapRef = useRef<google.maps.Map | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const lastPositionsRef = useRef<Map<string, google.maps.LatLngLiteral>>(new Map());
+  const centeredOnUserRef = useRef(false);
+
+  // Center map on user location (once map is ready and no route selected)
+  const centerOnUser = useCallback((location: google.maps.LatLngLiteral) => {
+    if (mapRef.current && !route && !centeredOnUserRef.current) {
+      centeredOnUserRef.current = true;
+      mapRef.current.setCenter(location);
+      mapRef.current.setZoom(14);
+    }
+  }, [route]);
 
   // Get user's device location on mount
   useEffect(() => {
@@ -61,11 +71,7 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
             lng: position.coords.longitude,
           };
           setUserLocation(location);
-          // Center map on user location if no route is selected
-          if (mapRef.current && !route) {
-            mapRef.current.setCenter(location);
-            mapRef.current.setZoom(14);
-          }
+          centerOnUser(location);
         },
         (error) => {
           console.log('Geolocation error:', error.message);
@@ -73,7 +79,7 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
         { enableHighAccuracy: true, timeout: 10000 }
       );
     }
-  }, []);
+  }, [centerOnUser]);
 
   // Parse route coordinates and stops from stored JSON
   useEffect(() => {
