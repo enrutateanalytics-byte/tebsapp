@@ -31,6 +31,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Route as RouteIcon, Map, Upload, Search } from 'lucide-react';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import GoogleMapsProvider from '@/components/maps/GoogleMapsProvider';
 import RouteMap from '@/components/maps/RouteMap';
 import BulkRouteUpload from '@/components/routes/BulkRouteUpload';
@@ -66,6 +67,7 @@ const Routes = () => {
   const [tempCoordinates, setTempCoordinates] = useState<{ lat: number; lng: number }[]>([]);
   const [tempStops, setTempStops] = useState<KmlStop[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [clientFilter, setClientFilter] = useState<string>('__all__');
   const queryClient = useQueryClient();
 
   const { data: routes, isLoading } = useQuery({
@@ -227,15 +229,19 @@ const Routes = () => {
   };
 
   const filteredRoutes = useMemo(() => {
-    if (!routes || !searchQuery.trim()) return routes;
+    let result = routes;
+    if (clientFilter !== '__all__') {
+      result = result?.filter((route) => route.client_id === clientFilter);
+    }
+    if (!result || !searchQuery.trim()) return result;
     const query = searchQuery.toLowerCase();
-    return routes.filter((route) =>
+    return result.filter((route) =>
       route.name.toLowerCase().includes(query) ||
       route.clients?.name?.toLowerCase().includes(query) ||
       route.origin_address?.toLowerCase().includes(query) ||
       route.destination_address?.toLowerCase().includes(query)
     );
-  }, [routes, searchQuery]);
+  }, [routes, searchQuery, clientFilter]);
 
   return (
     <div className="space-y-6">
@@ -394,14 +400,28 @@ const Routes = () => {
         </DialogContent>
       </Dialog>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar rutas..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
-        />
+      <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar rutas..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="w-full sm:w-64">
+          <SearchableSelect
+            options={[
+              { value: '__all__', label: 'Todos los clientes' },
+              ...(clients?.map((c) => ({ value: c.id, label: c.name })) ?? []),
+            ]}
+            value={clientFilter}
+            onValueChange={setClientFilter}
+            placeholder="Filtrar por cliente"
+            searchPlaceholder="Buscar cliente..."
+          />
+        </div>
       </div>
 
       {isLoading ? (
