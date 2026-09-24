@@ -130,6 +130,15 @@ All colors MUST be HSL.
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Hidden scrollbar for horizontal pill rows */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Smooth scrolling for native feel */
 .native-scroll {
   -webkit-overflow-scrolling: touch;
