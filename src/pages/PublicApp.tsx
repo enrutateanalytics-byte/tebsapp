@@ -227,8 +227,8 @@ const PublicApp = () => {
         <div className="absolute top-4 left-4 right-4 z-40 animate-fade-in space-y-2">
           {/* Shift filter - quick pills */}
           {availableShifts.length > 0 && (
-            <div className="overflow-x-auto overflow-y-hidden -mx-4 px-4">
-              <div className="inline-flex items-center gap-1.5 bg-card/95 backdrop-blur-sm shadow-xl rounded-full p-1 max-w-full">
+            <div className="overflow-x-auto overflow-y-hidden no-scrollbar -mx-4 px-4">
+              <div className="flex flex-nowrap items-center gap-1.5 bg-card/95 backdrop-blur-sm shadow-xl rounded-full p-1 w-max">
                 <button
                   onClick={() => {
                     setShiftFilter('__all__');
