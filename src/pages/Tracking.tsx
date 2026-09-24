@@ -94,8 +94,10 @@ const Tracking = () => {
         lng: sumLng / positions.length,
       };
     }
+    // Fallback: center on the user's own location
+    if (userLocation) return userLocation;
     return { lat: 19.4326, lng: -99.1332 }; // Default: Mexico City
-  }, [positions]);
+  }, [positions, userLocation]);
 
   const unitsWithPosition = positions?.map((p) => p.unit_id) ?? [];
   const unitsWithoutPosition = units?.filter((u) => !unitsWithPosition.includes(u.id)) ?? [];
@@ -166,6 +168,24 @@ const Tracking = () => {
                       }
                     />
                   ))}
+                  {/* User location marker (blue dot) */}
+                  {userLocation && typeof google !== 'undefined' && (
+                    <Marker
+                      position={userLocation}
+                      title="Tu ubicación"
+                      zIndex={999}
+                      icon={{
+                        url: 'data:image/svg+xml,' + encodeURIComponent(`
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" fill="hsl(221, 83%, 53%)" fill-opacity="0.2"/>
+                            <circle cx="12" cy="12" r="6" fill="hsl(221, 83%, 53%)" stroke="white" stroke-width="2"/>
+                          </svg>
+                        `),
+                        scaledSize: new google.maps.Size(24, 24),
+                        anchor: new google.maps.Point(12, 12),
+                      }}
+                    />
+                  )}
                 </GoogleMap>
               </GoogleMapsProvider>
             </CardContent>
