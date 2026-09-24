@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LogOut, MapPin, Navigation, Clock } from 'lucide-react';
+import { LogOut, MapPin, Navigation } from 'lucide-react';
 import tebsaLogo from '@/assets/tebsa-logo.png';
 import GoogleMapsProvider from '@/components/maps/GoogleMapsProvider';
 import PublicCombinedMap from '@/components/public/PublicCombinedMap';
@@ -185,31 +185,43 @@ const PublicApp = () => {
 
         {/* Floating Filters + Route Selector */}
         <div className="absolute top-4 left-4 right-4 z-40 animate-fade-in space-y-2">
-          {/* Shift filter */}
-          <Select
-            value={shiftFilter}
-            onValueChange={(value) => {
-              setShiftFilter(value);
-              setSelectedRoute(null);
-            }}
-          >
-            <SelectTrigger className="w-full bg-card/95 backdrop-blur-sm shadow-xl border-0 h-11 rounded-xl">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center">
-                  <Clock className="w-4 h-4 text-primary" />
-                </div>
-                <SelectValue placeholder="Todos los turnos" />
+          {/* Shift filter - quick pills */}
+          {availableShifts.length > 0 && (
+            <div className="overflow-x-auto overflow-y-hidden -mx-4 px-4">
+              <div className="inline-flex items-center gap-1.5 bg-card/95 backdrop-blur-sm shadow-xl rounded-full p-1 max-w-full">
+                <button
+                  onClick={() => {
+                    setShiftFilter('__all__');
+                    setSelectedRoute(null);
+                  }}
+                  className={`shrink-0 h-8 px-3 rounded-full text-xs font-semibold transition-colors ${
+                    shiftFilter === '__all__'
+                      ? 'bg-primary text-primary-foreground shadow'
+                      : 'text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  Todos
+                </button>
+                {availableShifts.map((shift) => (
+                  <button
+                    key={shift}
+                    onClick={() => {
+                      setShiftFilter(shift);
+                      setSelectedRoute(null);
+                    }}
+                    className={`shrink-0 h-8 px-3 rounded-full text-xs font-semibold transition-colors ${
+                      shiftFilter === shift
+                        ? 'bg-primary text-primary-foreground shadow'
+                        : 'text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    Turno {shift}
+                  </button>
+                ))}
               </div>
-            </SelectTrigger>
-            <SelectContent className="bg-card/95 backdrop-blur-sm border-0 shadow-xl rounded-xl z-50">
-              <SelectItem value="__all__" className="py-3 cursor-pointer">Todos los turnos</SelectItem>
-              {availableShifts.map((shift) => (
-                <SelectItem key={shift} value={shift} className="py-3 cursor-pointer">
-                  Turno {shift}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            </div>
+          )}
+
 
           {/* Route selector */}
           <Select
