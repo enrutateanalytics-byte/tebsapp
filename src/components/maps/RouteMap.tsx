@@ -158,7 +158,7 @@ const RouteMap = ({ coordinates, stops = [], routeId, className }: RouteMapProps
 
   const center = useMemo(() => {
     if (coordinates.length === 0) {
-      return { lat: 32.5149, lng: -117.0382 }; // Default: Mexico City
+      return { lat: 32.5149, lng: -117.0382 }; // Default: Tijuana, BC
     }
     const sumLat = coordinates.reduce((acc, c) => acc + c.lat, 0);
     const sumLng = coordinates.reduce((acc, c) => acc + c.lng, 0);

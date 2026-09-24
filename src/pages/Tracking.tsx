@@ -96,7 +96,7 @@ const Tracking = () => {
     }
     // Fallback: center on the user's own location
     if (userLocation) return userLocation;
-    return { lat: 32.5149, lng: -117.0382 }; // Default: Mexico City
+    return { lat: 32.5149, lng: -117.0382 }; // Default: Tijuana, BC
   }, [positions, userLocation]);
 
   const unitsWithPosition = positions?.map((p) => p.unit_id) ?? [];
