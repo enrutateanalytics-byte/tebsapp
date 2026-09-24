@@ -261,14 +261,20 @@ const PublicCombinedMap = ({ route, clientId }: PublicCombinedMapProps) => {
   const handleMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
     
-    if (routeCoordinates.length === 0 && stops.length === 0 && (!positions || positions.length === 0)) return;
+    // Priority: center on user location when no route is selected
+    if (routeCoordinates.length === 0 && stops.length === 0) {
+      if (userLocation) {
+        centerOnUser(userLocation);
+      }
+      return;
+    }
     
     const bounds = new google.maps.LatLngBounds();
     routeCoordinates.forEach(coord => bounds.extend(coord));
     stops.forEach(stop => bounds.extend({ lat: stop.lat, lng: stop.lng }));
     positions?.forEach(pos => bounds.extend({ lat: Number(pos.latitude), lng: Number(pos.longitude) }));
     map.fitBounds(bounds, 50);
-  }, [routeCoordinates, stops, positions]);
+  }, [routeCoordinates, stops, positions, userLocation, centerOnUser]);
 
   // Convert animated positions map to array for rendering
   const animatedMarkersArray = useMemo(() => {
