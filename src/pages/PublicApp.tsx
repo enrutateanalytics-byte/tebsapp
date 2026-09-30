@@ -36,17 +36,28 @@ interface ClientUserData {
 
 // Same shifts used when creating an assignment
 const SHIFTS = [
-  { id: 'morning', name: 'Turno Mañana', start: '06:00', end: '14:00' },
-  { id: 'afternoon', name: 'Turno Tarde', start: '14:00', end: '22:00' },
-  { id: 'night', name: 'Turno Noche', start: '22:00', end: '06:00' },
+  { id: 'morning', name: 'Turno Mañana', start: '03:00', end: '12:00' },
+  { id: 'afternoon', name: 'Turno Tarde', start: '12:00', end: '20:00' },
+  { id: 'night', name: 'Turno Noche', start: '20:00', end: '03:00' },
   { id: 'full', name: 'Turno Completo', start: null, end: null },
 ] as const;
+
+// Horarios antiguos que siguen existiendo en asignaciones ya guardadas
+const LEGACY_SHIFT_TIMES: Record<string, string> = {
+  '06:00-14:00': 'morning',
+  '14:00-22:00': 'afternoon',
+  '22:00-06:00': 'night',
+};
 
 const getShiftFromTimes = (start: string | null, end: string | null): string => {
   const s = start ? start.slice(0, 5) : null;
   const e = end ? end.slice(0, 5) : null;
   if (!s && !e) return 'full';
-  return SHIFTS.find((sh) => sh.start === s && sh.end === e)?.id || 'full';
+  return (
+    SHIFTS.find((sh) => sh.start === s && sh.end === e)?.id ||
+    LEGACY_SHIFT_TIMES[`${s}-${e}`] ||
+    'full'
+  );
 };
 
 const PublicApp = () => {

@@ -35,13 +35,20 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, CalendarClock, Search, Sun, Sunset, Moon, Bus, Route, UserCog } from 'lucide-react';
 
 const SHIFTS = [
-  { id: 'morning', name: 'Turno Mañana', start: '06:00', end: '14:00', icon: Sun },
-  { id: 'afternoon', name: 'Turno Tarde', start: '14:00', end: '22:00', icon: Sunset },
-  { id: 'night', name: 'Turno Noche', start: '22:00', end: '06:00', icon: Moon },
+  { id: 'morning', name: 'Turno Mañana', start: '03:00', end: '12:00', icon: Sun },
+  { id: 'afternoon', name: 'Turno Tarde', start: '12:00', end: '20:00', icon: Sunset },
+  { id: 'night', name: 'Turno Noche', start: '20:00', end: '03:00', icon: Moon },
   { id: 'full', name: 'Turno Completo', start: null, end: null, icon: CalendarClock },
 ] as const;
 
 type ShiftId = typeof SHIFTS[number]['id'];
+
+// Horarios antiguos que siguen existiendo en asignaciones ya guardadas
+const LEGACY_SHIFT_TIMES: Record<string, ShiftId> = {
+  '06:00-14:00': 'morning',
+  '14:00-22:00': 'afternoon',
+  '22:00-06:00': 'night',
+};
 
 const normalizeTime = (t: string | null) => (t ? t.slice(0, 5) : null);
 
@@ -50,7 +57,8 @@ const getShiftFromTimes = (start: string | null, end: string | null): ShiftId =>
   const e = normalizeTime(end);
   if (!s && !e) return 'full';
   const shift = SHIFTS.find(sh => sh.start === s && sh.end === e);
-  return shift?.id || 'full';
+  if (shift) return shift.id;
+  return LEGACY_SHIFT_TIMES[`${s}-${e}`] || 'full';
 };
 
 const getShiftLabel = (start: string | null, end: string | null): string => {
